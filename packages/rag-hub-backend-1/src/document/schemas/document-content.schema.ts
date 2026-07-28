@@ -2,9 +2,9 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-23 10:52:11
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-07-23 10:52:27
+ * @LastEditTime: 2026-07-27 13:40:28
  * @Description:
- * @FilePath: /rag-hub-backend/src/document/schemas/document-content.schema.ts
+ * @FilePath: /nest-lab/packages/rag-hub-backend-1/src/document/schemas/document-content.schema.ts
  */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { HydratedDocument, Types } from 'mongoose'
@@ -21,32 +21,33 @@ export type DocumentContentDocument = HydratedDocument<DocumentContent>
   versionKey: false,
 })
 export class DocumentContent {
-  /** ObjectId，对应 kh_document.content_id */
-  _id: Types.ObjectId
+  // NOTE:给属性加 !（definite assignment assertion），告诉编译器「运行时一定有值」。这是 NestJS + Mongoose schema 的常见写法。
+  /** ObjectId，对应 kh_document.content_id（由 Mongo 驱动赋值） */
+  _id!: Types.ObjectId
 
   /** 关联的文档元数据 ID（kh_document.id） */
   @Prop({ type: String, required: true, index: true })
-  documentId: string
+  documentId!: string
 
   /** Markdown 正文 */
   @Prop({ type: String, required: true, default: '' })
-  content: string
+  content!: string
 
   /** 正文字符数 */
   @Prop({ type: Number, default: 0 })
-  contentLength: number
+  contentLength!: number
 
   /** 正文摘要 / 预览 */
   @Prop({ type: String, default: '' })
-  contentSummary: string
+  contentSummary!: string
 
   /** 版本号 */
   @Prop({ type: Number, default: 1 })
-  version: number
+  version!: number
 
   /** 逻辑删除 */
   @Prop({ type: Boolean, default: false })
-  deleted: boolean
+  deleted!: boolean
 }
 
 export const DocumentContentSchema = SchemaFactory.createForClass(DocumentContent)

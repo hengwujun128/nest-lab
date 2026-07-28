@@ -10,21 +10,28 @@ export enum DocumentStatus {
   /** 已归档：不会作为知识被检索 */
   Archived = 2,
 }
+/*
+ * NOTE:
+ *和 Mongoose 一样——TypeORM Entity 的字段由 ORM 在 create/find 时注入，
+ *不经过构造函数初始化。
+ *开启 strictPropertyInitialization 时，必填属性必须用 ! 声明「运行时一定有值」
+ *
+ * */
 
 /** 文档元数据（PostgreSQL kh_document） */
 @Entity('kh_document')
 export class DocumentEntity {
   /** 雪花 ID */
   @PrimaryColumn({ type: 'bigint', transformer: bigintTransformer })
-  id: string
+  id!: string
 
   /** 标题 */
   @Column({ type: 'varchar' })
-  title: string
+  title!: string
 
   /** MongoDB document_content._id */
   @Column({ name: 'content_id', type: 'varchar', unique: true })
-  contentId: string
+  contentId!: string
 
   /** 摘要 */
   @Column({ type: 'varchar', nullable: true })
@@ -67,7 +74,7 @@ export class DocumentEntity {
 
   /** 状态：0 草稿 / 1 已发布 / 2 已归档 */
   @Column({ type: 'smallint', default: DocumentStatus.Draft })
-  status: DocumentStatus
+  status!: DocumentStatus
 
   /** 备注 */
   @Column({ type: 'varchar', nullable: true })
@@ -75,23 +82,23 @@ export class DocumentEntity {
 
   /** 浏览数 */
   @Column({ name: 'view_count', type: 'int', default: 0 })
-  viewCount: number
+  viewCount!: number
 
   /** 点赞数 */
   @Column({ name: 'like_count', type: 'int', default: 0 })
-  likeCount: number
+  likeCount!: number
 
   /** 评论数 */
   @Column({ name: 'comment_count', type: 'int', default: 0 })
-  commentCount: number
+  commentCount!: number
 
   /** 收藏数 */
   @Column({ name: 'favorite_count', type: 'int', default: 0 })
-  favoriteCount: number
+  favoriteCount!: number
 
   /** 字数 */
   @Column({ name: 'word_count', type: 'int', default: 0 })
-  wordCount: number
+  wordCount!: number
 
   /** 发布时间 */
   @Column({ name: 'publish_time', type: 'timestamp', nullable: true })
@@ -99,15 +106,15 @@ export class DocumentEntity {
 
   /** 是否公开 */
   @Column({ name: 'is_public', type: 'boolean', default: false })
-  isPublic: boolean
+  isPublic!: boolean
 
   /** 创建时间 */
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
-  createdAt: Date
+  createdAt!: Date
 
   /** 更新时间 */
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
-  updatedAt: Date
+  updatedAt!: Date
 
   /** 创建人 ID */
   @Column({
@@ -129,5 +136,5 @@ export class DocumentEntity {
 
   /** 逻辑删除 */
   @Column({ type: 'boolean', default: false })
-  deleted: boolean
+  deleted!: boolean
 }
