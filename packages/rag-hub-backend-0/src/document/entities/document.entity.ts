@@ -16,15 +16,15 @@ export enum DocumentStatus {
 export class DocumentEntity {
   /** 雪花 ID */
   @PrimaryColumn({ type: 'bigint', transformer: bigintTransformer })
-  id: string
+  id!: string
 
   /** 标题 */
   @Column({ type: 'varchar' })
-  title: string
+  title!: string
 
   /** MongoDB document_content._id */
   @Column({ name: 'content_id', type: 'varchar', unique: true })
-  contentId: string
+  contentId!: string
 
   /** 摘要 */
   @Column({ type: 'varchar', nullable: true })
