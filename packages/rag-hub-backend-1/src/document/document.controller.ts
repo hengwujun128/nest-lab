@@ -1,16 +1,30 @@
 /*
  * @Author: 张泽全 hengwujun128@gmail.com
- * @Date: 2026-07-22 15:50:19
+ * @Date: 2026-07-23 13:31:18
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-07-23 10:53:45
+ * @LastEditTime: 2026-08-20 15:13:25
  * @Description:
- * @FilePath: /rag-hub-backend/src/document/document.controller.ts
+ * @FilePath: /nest-lab/packages/rag-hub-backend-1/src/document/document.controller.ts
  */
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common'
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
+} from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
 import { DocumentService } from './document.service'
 import { CreateDocumentDto } from './dto/create-document.dto'
 import { UpdateDocumentDto } from './dto/update-document.dto'
 import { QueryDocumentDto } from './dto/query-document.dto'
+import { UploadParseDto } from './dto/upload-parse.dto'
 
 /** 文档接口 */
 @Controller('documents')
@@ -21,6 +35,20 @@ export class DocumentController {
   @Post()
   create(@Body() dto: CreateDocumentDto) {
     return this.documentService.create(dto)
+  }
+
+  /** 上传文件并解析为 Markdown，创建草稿（form-data 字段名: file） */
+  @Post('upload/parse')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+    }),
+  )
+  uploadAndParse(@UploadedFile() file: Express.Multer.File, @Body() meta: UploadParseDto) {
+    if (!file) {
+      throw new BadRequestException('请上传文件（form-data 字段名: file）')
+    }
+    return this.documentService.uploadAndCreateDocument(file, meta)
   }
 
   /** 分页查询文档列表（仅元数据） */

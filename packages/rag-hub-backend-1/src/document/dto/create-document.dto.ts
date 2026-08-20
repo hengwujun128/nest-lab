@@ -2,9 +2,9 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-22 15:50:19
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-07-23 10:44:19
+ * @LastEditTime: 2026-08-20 14:07:32
  * @Description:
- * @FilePath: /rag-hub-backend/src/document/dto/create-document.dto.ts
+ * @FilePath: /nest-lab/packages/rag-hub-backend-1/src/document/dto/create-document.dto.ts
  */
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator'
 import { DocumentStatus } from '../entities/document.entity'
@@ -13,11 +13,11 @@ import { DocumentStatus } from '../entities/document.entity'
 export class CreateDocumentDto {
   /** 标题 */
   @IsString()
-  title: string
+  title!: string
 
   /** Markdown 正文 */
   @IsString()
-  content: string
+  content!: string
 
   /** 摘要 */
   @IsOptional()
