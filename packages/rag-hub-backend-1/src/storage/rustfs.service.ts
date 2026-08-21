@@ -14,14 +14,21 @@ export interface UploadBytesOptions {
 /** RustFS 文件存储（S3 兼容） */
 @Injectable()
 export class RustfsService implements OnModuleInit {
+  // 日志记录器
   private readonly logger = new Logger(RustfsService.name)
+  // S3 客户端
   private client: S3Client | null = null
+  // 是否启用
   private enabled = false
+  // 桶名称
   private bucket = ''
+  // 公共访问 URL
   private publicBaseUrl = ''
 
+  // 配置服务
   constructor(private readonly config: ConfigService) {}
 
+  // 模块初始化
   onModuleInit() {
     this.enabled = this.config.get<string>('RUSTFS_ENABLED', 'true').toLowerCase() !== 'false'
 
@@ -49,6 +56,7 @@ export class RustfsService implements OnModuleInit {
 
     this.logger.log(`RustFS 已配置: endpoint=${endpoint}, bucket=${this.bucket}, public=${this.publicBaseUrl}`)
 
+    // 初始化的时候, 确保 bucket 存在
     void this.ensureBucket().catch((err) => {
       this.logger.warn(`RustFS 初始化 bucket 失败（首次上传时会重试）: ${err instanceof Error ? err.message : err}`)
     })
@@ -87,6 +95,7 @@ export class RustfsService implements OnModuleInit {
     return url
   }
 
+  //
   private async ensureBucket(): Promise<void> {
     if (!this.client) return
 
@@ -118,11 +127,13 @@ function formatDatePath(): string {
   return `${y}/${m}/${day}`
 }
 
+// 清理文件名
 function sanitizeBaseName(fileName: string): string {
   const base = fileName.replace(/\.[^.]+$/, '') || 'file'
   return base.replace(/[^\w\u4e00-\u9fff.-]+/g, '_').slice(0, 64)
 }
 
+// 猜测文件扩展名
 function guessExt(contentType: string): string {
   switch (contentType) {
     case 'image/png':

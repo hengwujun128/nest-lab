@@ -268,6 +268,7 @@ export class DocumentService {
 
     let parsedContent: string
     try {
+      // parsedContent 是 Markdown 字符串（Promise<string>），不是单独的 .md 文件对象
       parsedContent = await this.fileParserService.parse({
         originalname: originalFilename,
         buffer: file.buffer,
@@ -283,6 +284,7 @@ export class DocumentService {
     let fileUrl: string | null = null
     if (this.rustfs.isEnabled()) {
       try {
+        // 上传文件到 RustFS
         fileUrl = await this.rustfs.uploadBytes(file.buffer, {
           fileName: originalFilename,
           contentType: file.mimetype || 'application/octet-stream',
@@ -299,6 +301,7 @@ export class DocumentService {
 
     const title = titleFromFilename(originalFilename)
 
+    // 创建文档
     const created = await this.create({
       title,
       content: parsedContent,
