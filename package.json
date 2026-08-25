@@ -10,7 +10,11 @@
     "test": "pnpm -r --if-present run test",
     "lint": "pnpm -r --if-present run lint",
     "format": "pnpm -r --if-present run format",
-    "clean": "pnpm -r exec rm -rf node_modules dist && rm -rf node_modules"
+    "clean": "pnpm -r exec rm -rf node_modules dist && rm -rf node_modules",
+    "infra:up": "docker compose -p nest-lab -f docker/docker-compose.yml --project-directory docker up -d",
+    "infra:down": "docker compose -p nest-lab -f docker/docker-compose.yml --project-directory docker down",
+    "infra:ps": "docker compose -p nest-lab -f docker/docker-compose.yml --project-directory docker ps",
+    "infra:logs": "docker compose -p nest-lab -f docker/docker-compose.yml --project-directory docker logs -f --tail=100"
   },
   "devDependencies": {
     "prettier": "catalog:"
