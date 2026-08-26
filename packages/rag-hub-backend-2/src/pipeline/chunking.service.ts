@@ -39,8 +39,11 @@ export class ChunkingService {
   private static readonly HEADING_LINE = /^(#{1,6})\s+(.+)$/m
 
   constructor(config: ConfigService) {
+    // 分块大小和重叠大小,
     const chunkSizeTokens = Number(config.get('RAG_CHUNK_SIZE', 512))
+    // 重叠大小
     const chunkOverlapTokens = Number(config.get('RAG_CHUNK_OVERLAP', 64))
+    // 转换为字符数
     const chunkSize = Math.floor(chunkSizeTokens * ChunkingService.CHARS_PER_TOKEN)
     const chunkOverlap = Math.floor(chunkOverlapTokens * ChunkingService.CHARS_PER_TOKEN)
 

@@ -25,6 +25,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1094.0",
     "@elastic/elasticsearch": "catalog:",
+    "@langchain/core": "catalog:",
     "@langchain/openai": "catalog:",
     "@langchain/textsplitters": "catalog:",
     "@nestjs/common": "catalog:",

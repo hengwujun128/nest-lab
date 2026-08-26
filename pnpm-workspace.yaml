@@ -48,6 +48,7 @@ catalog:
   typescript-eslint: ^8.65.0
   crypto: ^1.0.1
   amqp-connection-manager: ^5.0.0
+  '@langchain/core': ^1.2.9
   '@langchain/textsplitters': ^1.0.1
   '@langchain/openai': ^1.5.10
   '@elastic/elasticsearch': ^9.5.0
