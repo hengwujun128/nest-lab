@@ -47,3 +47,4 @@ catalog:
   eslint-plugin-prettier: ^5.5.6
   typescript-eslint: ^8.65.0
   crypto: ^1.0.1
+  amqp-connection-manager: ^5.0.0

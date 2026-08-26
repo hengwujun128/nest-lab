@@ -1,3 +1,11 @@
+/*
+ * @Author: 张泽全 hengwujun128@gmail.com
+ * @Date: 2026-08-25 13:54:51
+ * @LastEditors: 张泽全 hengwujun128@gmail.com
+ * @LastEditTime: 2026-08-25 19:05:37
+ * @Description:
+ * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/mq.constants.ts
+ */
 /**
  * RabbitMQ 拓扑常量
  *
@@ -6,10 +14,10 @@
  */
 
 /** RAG 重建索引交换机（topic） */
-export const RAG_REINDEX_EXCHANGE = 'rag.reindex.exchange';
+export const RAG_REINDEX_EXCHANGE = 'rag.reindex.exchange'
 
 /** 本服务消费的队列 */
-export const RAG_REINDEX_QUEUE = 'kh.rag.reindex.queue';
+export const RAG_REINDEX_QUEUE = 'kh.rag.reindex.queue'
 
 /** 路由键：按文档 ID 重建 */
-export const RAG_RK_BY_IDS = 'rag.reindex.by_ids';
+export const RAG_RK_BY_IDS = 'rag.reindex.by_ids'

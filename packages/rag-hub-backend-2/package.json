@@ -31,6 +31,7 @@
     "@nestjs/mongoose": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/typeorm": "catalog:",
+    "amqp-connection-manager": "catalog:",
     "amqplib": "catalog:",
     "class-transformer": "catalog:",
     "class-validator": "catalog:",

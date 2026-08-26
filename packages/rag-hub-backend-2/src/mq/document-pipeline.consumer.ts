@@ -1,9 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConsumeMessage } from 'amqplib';
-import { PipelineOrchestrator } from '../pipeline/pipeline.orchestrator';
-import { RAG_REINDEX_QUEUE } from './mq.constants';
-import { ReindexMessage } from './messages/pipeline.messages';
-import { RabbitMqService } from './rabbitmq.service';
+/*
+ * @Author: 张泽全 hengwujun128@gmail.com
+ * @Date: 2026-08-25 13:54:51
+ * @LastEditors: 张泽全 hengwujun128@gmail.com
+ * @LastEditTime: 2026-08-26 09:38:33
+ * @Description:
+ * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/document-pipeline.consumer.ts
+ */
+import { Injectable, Logger } from '@nestjs/common'
+import { ConsumeMessage } from 'amqplib'
+import { PipelineOrchestrator } from '../pipeline/pipeline.orchestrator'
+import { RAG_REINDEX_QUEUE } from './mq.constants'
+import { ReindexMessage } from './messages/pipeline.messages'
+import { RabbitMqService } from './rabbitmq.service'
 
 /**
  * 文档发布后管线的 MQ 消费者
@@ -14,27 +22,25 @@ import { RabbitMqService } from './rabbitmq.service';
  */
 @Injectable()
 export class DocumentPipelineConsumer {
-  private readonly logger = new Logger(DocumentPipelineConsumer.name);
+  private readonly logger = new Logger(DocumentPipelineConsumer.name)
 
   constructor(
     private readonly rabbit: RabbitMqService,
     private readonly orchestrator: PipelineOrchestrator,
   ) {
-    this.rabbit.registerHandler(RAG_REINDEX_QUEUE, (msg) =>
-      this.handleRag(msg),
-    );
+    this.rabbit.registerHandler(RAG_REINDEX_QUEUE, (msg) => this.handleRag(msg))
   }
 
   /** RAG：分块 → 向量化 → ES kh_chunk（dense_vector） */
   private async handleRag(msg: ConsumeMessage) {
-    const body = this.parseJson<ReindexMessage>(msg);
+    const body = this.parseJson<ReindexMessage>(msg)
     this.logger.log(
       `[RAG] type=${body.type}, taskId=${body.taskId}, documentIds=${JSON.stringify(body.documentIds ?? [])}`,
-    );
-    await this.orchestrator.handleRagReindex(body.type, body.documentIds);
+    )
+    await this.orchestrator.handleRagReindex(body.type, body.documentIds)
   }
 
   private parseJson<T>(msg: ConsumeMessage): T {
-    return JSON.parse(msg.content.toString('utf8')) as T;
+    return JSON.parse(msg.content.toString('utf8')) as T
   }
 }

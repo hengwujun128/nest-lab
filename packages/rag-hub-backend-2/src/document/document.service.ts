@@ -254,7 +254,7 @@ export class DocumentService {
 
   async publish(id: string) {
     this.logger.log(`发布文档：documentId=${id}`)
-
+    // NOTE:主要是通过查询元数据来判断文档是否可以发布
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -267,6 +267,7 @@ export class DocumentService {
       throw new BadRequestException('当前文档状态不允许发布')
     }
 
+    // 更新文档状态为已发布，并记录发布时间,并保存到数据库
     doc.status = DocumentStatus.Published
     doc.publishTime = new Date()
     const saved = await this.em.save(doc)
