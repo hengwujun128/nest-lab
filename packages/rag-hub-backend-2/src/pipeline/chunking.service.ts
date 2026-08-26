@@ -1,8 +1,8 @@
-import { createHash } from 'crypto';
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { DocumentChunk } from './types/pipeline.types';
+import { createHash } from 'crypto'
+import { Injectable, Logger } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
+import { DocumentChunk } from './types/pipeline.types'
 
 /**
  * 文档分块服务（基于 LangChain RecursiveCharacterTextSplitter / markdown）
@@ -26,38 +26,31 @@ import { DocumentChunk } from './types/pipeline.types';
  */
 @Injectable()
 export class ChunkingService {
-  private readonly logger = new Logger(ChunkingService.name);
-  private readonly splitter: RecursiveCharacterTextSplitter;
+  private readonly logger = new Logger(ChunkingService.name)
+  private readonly splitter: RecursiveCharacterTextSplitter
 
   /**
    * token → 字符的粗略换算系数。
    * 中英文混合场景偏保守：约 1 token ≈ 2 字符。
    */
-  private static readonly CHARS_PER_TOKEN = 2.0;
+  private static readonly CHARS_PER_TOKEN = 2.0
 
   /** 匹配块内 Markdown ATX 标题行 */
-  private static readonly HEADING_LINE = /^(#{1,6})\s+(.+)$/m;
+  private static readonly HEADING_LINE = /^(#{1,6})\s+(.+)$/m
 
   constructor(config: ConfigService) {
-    const chunkSizeTokens = Number(config.get('RAG_CHUNK_SIZE', 512));
-    const chunkOverlapTokens = Number(config.get('RAG_CHUNK_OVERLAP', 64));
-    const chunkSize = Math.floor(
-      chunkSizeTokens * ChunkingService.CHARS_PER_TOKEN,
-    );
-    const chunkOverlap = Math.floor(
-      chunkOverlapTokens * ChunkingService.CHARS_PER_TOKEN,
-    );
+    const chunkSizeTokens = Number(config.get('RAG_CHUNK_SIZE', 512))
+    const chunkOverlapTokens = Number(config.get('RAG_CHUNK_OVERLAP', 64))
+    const chunkSize = Math.floor(chunkSizeTokens * ChunkingService.CHARS_PER_TOKEN)
+    const chunkOverlap = Math.floor(chunkOverlapTokens * ChunkingService.CHARS_PER_TOKEN)
 
     // 内置 markdown 分隔符未含 H1（\n# ），补上以免一级标题不切分
     this.splitter = new RecursiveCharacterTextSplitter({
       chunkSize,
       chunkOverlap,
       keepSeparator: true,
-      separators: [
-        '\n# ',
-        ...RecursiveCharacterTextSplitter.getSeparatorsForLanguage('markdown'),
-      ],
-    });
+      separators: ['\n# ', ...RecursiveCharacterTextSplitter.getSeparatorsForLanguage('markdown')],
+    })
   }
 
   /**
@@ -69,45 +62,42 @@ export class ChunkingService {
    * @returns 分块结果；内容为空时返回 []
    */
   async chunk(params: {
-    content: string;
-    documentId: string;
-    documentTitle: string;
-    categoryId?: string | null;
-    authorId?: string | null;
-    teamId?: string | null;
-    docStatus?: number | null;
-    publishTime?: string | null;
+    content: string
+    documentId: string
+    documentTitle: string
+    categoryId?: string | null
+    authorId?: string | null
+    teamId?: string | null
+    docStatus?: number | null
+    publishTime?: string | null
   }): Promise<DocumentChunk[]> {
-    const { content, documentId, documentTitle } = params;
+    const { content, documentId, documentTitle } = params
     if (!content?.trim()) {
-      this.logger.warn(`文档内容为空，跳过分块：documentId=${documentId}`);
-      return [];
+      this.logger.warn(`文档内容为空，跳过分块：documentId=${documentId}`)
+      return []
     }
 
-    const texts = await this.splitter.splitText(content);
-    const chunks: DocumentChunk[] = [];
-    let currentHeading: string | null = null;
+    const texts = await this.splitter.splitText(content)
+    const chunks: DocumentChunk[] = []
+    let currentHeading: string | null = null
 
     for (const text of texts) {
-      const trimmed = text.trim();
-      if (!trimmed) continue;
+      const trimmed = text.trim()
+      if (!trimmed) continue
 
-      const headingInChunk = this.extractHeading(trimmed);
+      const headingInChunk = this.extractHeading(trimmed)
       if (headingInChunk) {
-        currentHeading = headingInChunk;
+        currentHeading = headingInChunk
       }
 
       // 同章节后续块通常不含标题行：前缀补上，便于检索命中时带上下文
-      let chunkContent = trimmed;
+      let chunkContent = trimmed
       if (currentHeading && !ChunkingService.HEADING_LINE.test(trimmed)) {
-        chunkContent = `${currentHeading}\n\n${trimmed}`;
+        chunkContent = `${currentHeading}\n\n${trimmed}`
       }
 
       chunks.push({
-        chunkId: createHash('sha256')
-          .update(`${documentId}:${chunks.length}`)
-          .digest('hex')
-          .slice(0, 64),
+        chunkId: createHash('sha256').update(`${documentId}:${chunks.length}`).digest('hex').slice(0, 64),
         documentId,
         documentTitle,
         content: chunkContent,
@@ -119,23 +109,21 @@ export class ChunkingService {
         teamId: params.teamId,
         docStatus: params.docStatus,
         publishTime: params.publishTime,
-      });
+      })
     }
 
-    const total = chunks.length;
+    const total = chunks.length
     chunks.forEach((c) => {
-      c.totalChunks = total;
-    });
+      c.totalChunks = total
+    })
 
-    this.logger.debug(
-      `文档分块完成：documentId=${documentId}, totalChunks=${total}`,
-    );
-    return chunks;
+    this.logger.debug(`文档分块完成：documentId=${documentId}, totalChunks=${total}`)
+    return chunks
   }
 
   /** 取块内第一个 ATX 标题文案（不含 #） */
   private extractHeading(text: string): string | null {
-    const match = text.match(ChunkingService.HEADING_LINE);
-    return match?.[2]?.trim() || null;
+    const match = text.match(ChunkingService.HEADING_LINE)
+    return match?.[2]?.trim() || null
   }
 }

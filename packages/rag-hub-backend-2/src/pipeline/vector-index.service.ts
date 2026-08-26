@@ -1,10 +1,10 @@
-import { Client } from '@elastic/elasticsearch';
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { DocumentChunk } from './types/pipeline.types';
+import { Client } from '@elastic/elasticsearch'
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { DocumentChunk } from './types/pipeline.types'
 
 /** RAG 分块向量索引名 */
-const CHUNK_INDEX = 'kh_chunk';
+const CHUNK_INDEX = 'kh_chunk'
 
 /**
  * 向量索引存储
@@ -18,52 +18,44 @@ const CHUNK_INDEX = 'kh_chunk';
  */
 @Injectable()
 export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(VectorIndexService.name);
-  private es: Client | null = null;
-  private readonly esEnabled: boolean;
-  private readonly embeddingDims: number;
+  private readonly logger = new Logger(VectorIndexService.name)
+  private es: Client | null = null
+  private readonly esEnabled: boolean
+  private readonly embeddingDims: number
 
   constructor(private readonly config: ConfigService) {
-    this.esEnabled =
-      this.config.get<string>('ELASTICSEARCH_ENABLED', 'true') !== 'false';
-    this.embeddingDims = Number(config.get('EMBEDDING_DIMENSION', 1024));
+    this.esEnabled = this.config.get<string>('ELASTICSEARCH_ENABLED', 'true') !== 'false'
+    this.embeddingDims = Number(config.get('EMBEDDING_DIMENSION', 1024))
   }
 
   async onModuleInit() {
     if (!this.esEnabled) {
-      this.logger.warn('Elasticsearch 已禁用，RAG 向量索引将跳过写入');
-      return;
+      this.logger.warn('Elasticsearch 已禁用，RAG 向量索引将跳过写入')
+      return
     }
 
-    const node = this.config.get(
-      'ELASTICSEARCH_NODE',
-      'http://localhost:9200',
-    );
-    this.es = new Client({ node });
+    const node = this.config.get('ELASTICSEARCH_NODE', 'http://localhost:9200')
+    this.es = new Client({ node })
     try {
-      const health = await this.es.cluster.health();
-      this.logger.log(
-        `VectorIndex ES 已连接：${node}, status=${health.status}`,
-      );
-      await this.createIndexIfNotExists();
+      const health = await this.es.cluster.health()
+      this.logger.log(`VectorIndex ES 已连接：${node}, status=${health.status}`)
+      await this.createIndexIfNotExists()
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Elasticsearch 不可用，RAG 向量写入将跳过：${message}`);
-      this.es = null;
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`Elasticsearch 不可用，RAG 向量写入将跳过：${message}`)
+      this.es = null
     }
   }
 
   async onModuleDestroy() {
-    await this.es?.close();
+    await this.es?.close()
   }
 
   /** 删除某文档全部向量块（发布重建 / 下架时调用）。 */
   async deleteByDocId(documentId: string) {
     if (!this.es) {
-      this.logger.warn(
-        `跳过删除向量块（ES 不可用）：documentId=${documentId}`,
-      );
-      return;
+      this.logger.warn(`跳过删除向量块（ES 不可用）：documentId=${documentId}`)
+      return
     }
 
     try {
@@ -73,55 +65,48 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
           term: { document_id: documentId },
         },
         refresh: true,
-      });
-      this.logger.log(`已从 ES 删除文档向量块：documentId=${documentId}`);
+      })
+      this.logger.log(`已从 ES 删除文档向量块：documentId=${documentId}`)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error)
       // 索引尚不存在时忽略
       if (message.includes('index_not_found')) {
-        return;
+        return
       }
-      this.logger.error(
-        `ES 删除文档块失败：documentId=${documentId}, error=${message}`,
-      );
+      this.logger.error(`ES 删除文档块失败：documentId=${documentId}, error=${message}`)
     }
   }
 
   /** bulk 写入 / 覆盖 chunk（_id = chunkId）。 */
   async indexChunks(chunks: DocumentChunk[]) {
-    if (!chunks.length) return;
+    if (!chunks.length) return
 
     if (!this.es) {
-      this.logger.warn(
-        `跳过向量索引写入（ES 不可用）：chunks=${chunks.length}`,
-      );
-      return;
+      this.logger.warn(`跳过向量索引写入（ES 不可用）：chunks=${chunks.length}`)
+      return
     }
 
-    await this.createIndexIfNotExists();
+    await this.createIndexIfNotExists()
 
     const operations = chunks.flatMap((chunk) => [
       { index: { _index: CHUNK_INDEX, _id: chunk.chunkId } },
       this.buildDocMap(chunk),
-    ]);
+    ])
 
     const response = await this.es.bulk({
       refresh: true,
       operations,
-    });
+    })
 
     if (response.errors) {
       const failed = response.items
         .filter((item) => item.index?.error)
-        .map(
-          (item) =>
-            `${item.index?._id}: ${item.index?.error?.reason ?? 'unknown'}`,
-        );
-      this.logger.error(`ES 批量索引部分失败：${failed.join(', ')}`);
-      throw new Error(`ES 批量索引部分失败：${failed.length} 条`);
+        .map((item) => `${item.index?._id}: ${item.index?.error?.reason ?? 'unknown'}`)
+      this.logger.error(`ES 批量索引部分失败：${failed.join(', ')}`)
+      throw new Error(`ES 批量索引部分失败：${failed.length} 条`)
     }
 
-    this.logger.log(`ES 批量索引成功：${chunks.length} chunks → ${CHUNK_INDEX}`);
+    this.logger.log(`ES 批量索引成功：${chunks.length} chunks → ${CHUNK_INDEX}`)
   }
 
   /**
@@ -129,10 +114,10 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
    * document_id 用 keyword：雪花 ID 以字符串传递，避免 JS long 精度问题。
    */
   private async createIndexIfNotExists() {
-    if (!this.es) return;
+    if (!this.es) return
 
-    const exists = await this.es.indices.exists({ index: CHUNK_INDEX });
-    if (exists) return;
+    const exists = await this.es.indices.exists({ index: CHUNK_INDEX })
+    if (exists) return
 
     try {
       await this.es.indices.create({
@@ -168,17 +153,15 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
             },
           },
         },
-      });
-      this.logger.log(
-        `ES 索引创建成功：index=${CHUNK_INDEX}, dims=${this.embeddingDims}`,
-      );
+      })
+      this.logger.log(`ES 索引创建成功：index=${CHUNK_INDEX}, dims=${this.embeddingDims}`)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error)
       if (message.includes('resource_already_exists')) {
-        return;
+        return
       }
-      this.logger.error(`ES 索引创建失败：${message}`);
-      throw error;
+      this.logger.error(`ES 索引创建失败：${message}`)
+      throw error
     }
   }
 
@@ -197,10 +180,10 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
       doc_status: chunk.docStatus ?? null,
       publish_time: chunk.publishTime ?? null,
       indexed_at: new Date().toISOString(),
-    };
-    if (chunk.embedding?.length) {
-      doc.embedding = chunk.embedding;
     }
-    return doc;
+    if (chunk.embedding?.length) {
+      doc.embedding = chunk.embedding
+    }
+    return doc
   }
 }

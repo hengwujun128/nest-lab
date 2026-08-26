@@ -13,6 +13,7 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
   private connection: AmqpConnectionManager | null = null
   private channel: ChannelWrapper | null = null
   private readonly enabled: boolean
+  // 存储队列和消费者处理函数的映射关系
   private readonly handlers = new Map<string, MessageHandler>()
 
   constructor(private readonly config: ConfigService) {
