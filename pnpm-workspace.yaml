@@ -50,5 +50,6 @@ catalog:
   amqp-connection-manager: ^5.0.0
   '@langchain/core': ^1.2.9
   '@langchain/textsplitters': ^1.0.1
+  js-tiktoken: ^1.0.21
   '@langchain/openai': ^1.5.10
-  '@elastic/elasticsearch': ^9.5.0
+  '@elastic/elasticsearch': ^8.17.0

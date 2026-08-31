@@ -15,7 +15,11 @@ nest-lab/
 │   ├── rag-hub-backend-1/
 │   └── rag-hub-backend-2/       # 可另含本包专属 compose（RMQ / ES / Kibana）
 ├── docs/
-│   └── add-package.md
+│   ├── add-package.md
+│   ├── entity-schema-dto-methodology.md
+│   ├── multi-env-migration-methodology.md
+│   ├── mongoose-typeorm-prisma-schema-comparison.md
+│   └── troubleshooting.md
 ├── package.json
 └── pnpm-workspace.yaml
 ```
@@ -42,6 +46,7 @@ pnpm infra:up
 pnpm infra:ps
 
 # 3. 若某个包有专属服务（例如 backend-2 的 RabbitMQ / ES）
+#    一条命令拉起公共栈（nest-lab）+ 专属栈（rag-hub-backend-2）：
 pnpm --filter rag-hub-backend-2 docker:up
 
 # 4. 启动应用（可并行；注意应用 PORT 不要冲突）
@@ -53,7 +58,8 @@ pnpm --filter rag-hub-backend-2 start:dev   # 建议 .env 里 PORT=3001
 
 ```bash
 pnpm --filter rag-hub-backend-2 docker:down   # 只停该包专属
-pnpm infra:down                               # 停公共栈
+pnpm --filter rag-hub-backend-2 docker:down:all   # 本包 + 公共栈
+pnpm infra:down                               # 仅停公共栈
 ```
 
 ### 公共栈端口与账号
@@ -155,4 +161,8 @@ pnpm infra:up
 ## 文档
 
 - [新 Package 接入手册](./docs/add-package.md)
+- [Entity / Schema / DTO 建模方法论](./docs/entity-schema-dto-methodology.md)
+- [多环境数据迁移方法论](./docs/multi-env-migration-methodology.md)
+- [Mongoose / TypeORM / Prisma 对比](./docs/mongoose-typeorm-prisma-schema-comparison.md)
+- [故障排查](./docs/troubleshooting.md)（含 Elasticsearch 客户端版本不匹配）
 - [公共 Docker 说明](./docker/README.md)

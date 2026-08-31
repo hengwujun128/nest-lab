@@ -1,6 +1,6 @@
-# rag-hub-backend-2 专属中间件（依赖公共栈 nest-lab-net）
-# 先：pnpm infra:up（仓库根）
-# 再：pnpm --filter rag-hub-backend-2 docker:up
+# 本包专属中间件（compose 项目名 rag-hub-backend-2）
+# 一键启动公共 + 专属：pnpm docker:up
+# 仅启动本包专属：docker compose up -d
 
 name: rag-hub-backend-2
 
@@ -53,8 +53,3 @@ services:
     restart: always
     depends_on:
       - es
-
-networks:
-  default:
-    name: nest-lab-net
-    external: true

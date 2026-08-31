@@ -2,9 +2,9 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-07-23 10:55:49
+ * @LastEditTime: 2026-08-31 16:35:46
  * @Description:
- * @FilePath: /rag-hub-backend/src/app.module.ts
+ * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
@@ -15,11 +15,15 @@ import { AppService } from './app.service'
 import { DocumentModule } from './document/document.module'
 import { DocumentEntity } from './document/entities/document.entity'
 import { StorageModule } from './storage/storage.module'
+import { PipelineModule } from './pipeline/pipeline.module'
+import { MqModule } from './mq/mq.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    PipelineModule,
     StorageModule,
+    MqModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

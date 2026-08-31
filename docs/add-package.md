@@ -41,7 +41,7 @@ nest-lab/
 │   ├── init-scripts/
 │   └── volumes/
 ├── package.json                 # 含 infra:up / infra:down
-├── docs/
+├── docs/                        # 全仓共享文档
 └── packages/
     └── <package-name>/
         ├── package.json
@@ -55,6 +55,7 @@ nest-lab/
 
 - 一个 Nest 应用 = 一个 package。
 - **公共 DB / 对象存储只在 `docker/`**；包内禁止再起同端口的 PG/Mongo/RustFS。
+- **文档放在仓库根 `docs/`**，勿在各 package 内复制；见 [README 文档索引](../README.md#文档)。
 - 跨包复用代码成熟后再抽 `packages/shared-*`。
 
 ## Docker：公共 + 包专属

@@ -318,7 +318,7 @@ src/
     entities/            # PG Entity
     schemas/             # Mongo Schema
 init-scripts/            # 仅 Docker 空库引导，不参与三环境日常迁移
-docs/
+docs/                    # 仓库根目录，全仓共享
   entity-schema-dto-methodology.md
   multi-env-migration-methodology.md   # 本文
 ```

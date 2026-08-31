@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-08-26 15:18:42
+ * @LastEditTime: 2026-08-31 11:41:07
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/pipeline/embedding.service.ts
  */
@@ -28,7 +28,7 @@ export class EmbeddingService {
 
   constructor(config: ConfigService) {
     this.dimension = Number(config.get('EMBEDDING_DIMENSION', 1024))
-    // DashScope text-embedding-v3 单次最多 10 条；超过会 400 InvalidParameter
+    // DashScope text-embedding-v4 单次最多 10 条；超过会 400 InvalidParameter
     const configuredBatch = Number(config.get('EMBEDDING_BATCH_SIZE', 10))
     const batchSize = Math.min(Number.isFinite(configuredBatch) && configuredBatch > 0 ? configuredBatch : 10, 10)
     if (configuredBatch > 10) {
@@ -43,8 +43,8 @@ export class EmbeddingService {
       throw new Error('未配置 EMBEDDING_API_KEY / DASHSCOPE_API_KEY / OPENAI_API_KEY')
     }
 
-    const baseUrl = config.get('EMBEDDING_BASE_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1')
-    const model = config.get('EMBEDDING_MODEL', 'text-embedding-v3')
+    const baseUrl = config.get<string>('EMBEDDING_BASE_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1')
+    const model = config.get<string>('EMBEDDING_MODEL', 'text-embedding-v3')
 
     this.embeddings = new OpenAIEmbeddings({
       apiKey,

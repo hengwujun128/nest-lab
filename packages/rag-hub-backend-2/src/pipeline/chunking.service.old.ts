@@ -2,7 +2,6 @@ import { createHash } from 'crypto'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
-import { getEncoding, Tiktoken, TiktokenEncoding } from 'js-tiktoken'
 import { DocumentChunk } from './types/pipeline.types'
 
 /**
@@ -16,47 +15,34 @@ import { DocumentChunk } from './types/pipeline.types'
  * <p>分块策略：</p>
  * <ol>
  *   <li>用 Markdown 感知分隔符（标题 / 代码块 / 段落…）递归切分</li>
- *   <li>按 chunkSize / chunkOverlap 控制块大小与重叠，长度以真实 token 计量</li>
+ *   <li>按 chunkSize / chunkOverlap 控制块大小与重叠</li>
  *   <li>从块内标题行推断 heading，跨块继承上一标题并必要时前缀补全</li>
  * </ol>
  *
  * <p>配置：</p>
  * - RAG_CHUNK_SIZE：目标 token 数（默认 512）
  * - RAG_CHUNK_OVERLAP：重叠 token 数（默认 64）
+ * - 换算：CHARS_PER_TOKEN=2，即 512 token ≈ 1024 字符
  */
 @Injectable()
 export class ChunkingService {
   private readonly logger = new Logger(ChunkingService.name)
   private readonly splitter: RecursiveCharacterTextSplitter
-  private readonly encoder: Tiktoken
 
   /**
-   * 计长用的分词表。
-   * o200k_base 对中文的切分粒度接近现代多语言嵌入模型；换 embedding 模型时可一并调整。
-   * 注意它与 DashScope text-embedding-v3 的分词器并非同一套，结果是近似而非精确对齐。
+   * token → 字符的粗略换算系数。
+   * 中英文混合场景偏保守：约 1 token ≈ 2 字符。
    */
-  private static readonly TOKEN_ENCODING: TiktokenEncoding = 'o200k_base'
-
-  /** 递归切分会反复询问同一批子串的长度，缓存命中率高；超过此上限直接清空，避免长期驻留 */
-  private static readonly TOKEN_CACHE_MAX = 4096
-  private readonly tokenCache = new Map<string, number>()
+  private static readonly CHARS_PER_TOKEN = 2.0
 
   /** 匹配块内 Markdown ATX 标题行 */
-  private static readonly HEADING_LINE = /^(#{1,6})\s+(.+)$/gm
+  private static readonly HEADING_LINE = /^(#{1,6})\s+(.+)$/m
 
   constructor(config: ConfigService) {
-    // splitter 以 lengthFunction 的返回值为长度单位，这里接上 tokenizer，故二者直接就是 token 数
-    const chunkSize = this.readTokens(config, 'RAG_CHUNK_SIZE', 512)
-    let chunkOverlap = this.readTokens(config, 'RAG_CHUNK_OVERLAP', 64)
-
-    // overlap >= size 会让 splitter 构造即抛错，连带拖垮应用启动
-    const maxOverlap = Math.floor(chunkSize / 2)
-    if (chunkOverlap > maxOverlap) {
-      this.logger.warn(`RAG_CHUNK_OVERLAP 相对 RAG_CHUNK_SIZE 过大，已钳制为 ${maxOverlap} token`)
-      chunkOverlap = maxOverlap
-    }
-
-    this.encoder = getEncoding(ChunkingService.TOKEN_ENCODING)
+    const chunkSizeTokens = Number(config.get('RAG_CHUNK_SIZE', 512))
+    const chunkOverlapTokens = Number(config.get('RAG_CHUNK_OVERLAP', 64))
+    const chunkSize = Math.floor(chunkSizeTokens * ChunkingService.CHARS_PER_TOKEN)
+    const chunkOverlap = Math.floor(chunkOverlapTokens * ChunkingService.CHARS_PER_TOKEN)
 
     // 内置 markdown 分隔符未含 H1（\n# ），补上以免一级标题不切分
     this.splitter = new RecursiveCharacterTextSplitter({
@@ -64,7 +50,6 @@ export class ChunkingService {
       chunkOverlap,
       keepSeparator: true,
       separators: ['\n# ', ...RecursiveCharacterTextSplitter.getSeparatorsForLanguage('markdown')],
-      lengthFunction: (text) => this.countTokens(text),
     })
   }
 
@@ -100,15 +85,14 @@ export class ChunkingService {
       const trimmed = text.trim()
       if (!trimmed) continue
 
-      // 一个块可能装下多个小节：继承最后一个标题，否则后续块会挂到已结束的章节下
-      const headings = this.extractHeadings(trimmed)
-      if (headings.length) {
-        currentHeading = headings[headings.length - 1]
+      const headingInChunk = this.extractHeading(trimmed)
+      if (headingInChunk) {
+        currentHeading = headingInChunk
       }
 
       // 同章节后续块通常不含标题行：前缀补上，便于检索命中时带上下文
       let chunkContent = trimmed
-      if (currentHeading && !headings.length) {
+      if (currentHeading && !ChunkingService.HEADING_LINE.test(trimmed)) {
         chunkContent = `${currentHeading}\n\n${trimmed}`
       }
 
@@ -137,32 +121,9 @@ export class ChunkingService {
     return chunks
   }
 
-  /** 文本的真实 token 数，供 splitter 判断块是否超限 */
-  private countTokens(text: string): number {
-    const cached = this.tokenCache.get(text)
-    if (cached !== undefined) return cached
-
-    const count = this.encoder.encode(text).length
-    if (this.tokenCache.size >= ChunkingService.TOKEN_CACHE_MAX) this.tokenCache.clear()
-    this.tokenCache.set(text, count)
-    return count
-  }
-
-  /** 取块内所有 ATX 标题文案（不含 #），按出现先后排列 */
-  private extractHeadings(text: string): string[] {
-    return [...text.matchAll(ChunkingService.HEADING_LINE)].map((m) => m[2].trim()).filter((h) => h.length > 0)
-  }
-
-  /** 读取 token 数配置；缺省或非法（NaN、非正数）时回退默认值 */
-  private readTokens(config: ConfigService, key: string, fallback: number): number {
-    const raw = config.get<string | number>(key)
-    if (raw === undefined || raw === null || raw === '') return fallback
-
-    const value = Number(raw)
-    if (!Number.isFinite(value) || value <= 0) {
-      this.logger.warn(`${key}=${String(raw)} 非法，已回退为默认值 ${fallback}`)
-      return fallback
-    }
-    return value
+  /** 取块内第一个 ATX 标题文案（不含 #） */
+  private extractHeading(text: string): string | null {
+    const match = text.match(ChunkingService.HEADING_LINE)
+    return match?.[2]?.trim() || null
   }
 }

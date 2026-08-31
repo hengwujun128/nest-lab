@@ -34,9 +34,10 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
       return
     }
 
-    const node = this.config.get('ELASTICSEARCH_NODE', 'http://localhost:9200')
+    const node = this.config.get<string>('ELASTICSEARCH_NODE', 'http://localhost:9200')
     this.es = new Client({ node })
     try {
+      // 这是问 ES 集群：「你还活着吗？状态如何？」
       const health = await this.es.cluster.health()
       this.logger.log(`VectorIndex ES 已连接：${node}, status=${health.status}`)
       await this.createIndexIfNotExists()
