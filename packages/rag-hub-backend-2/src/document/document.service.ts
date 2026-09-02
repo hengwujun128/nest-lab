@@ -278,7 +278,7 @@ export class DocumentService {
 
     // MQ 失败不影响发布成功
     try {
-      await this.pipelinePublisher.afterPublish(saved)
+      await this.pipelinePublisher.afterPublish(saved, content)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.logger.warn(`发布后管线投递失败（不影响发布）：documentId=${id}, error=${message}`)
@@ -291,6 +291,7 @@ export class DocumentService {
   /**
    * 软删除文档
    * Postgres、Mongo 两侧都将 deleted 置为 true（不物理删正文）
+   * 并异步清理 ES 搜索索引与向量快
    */
   async remove(id: string) {
     const doc = await this.em.findOne(DocumentEntity, {
@@ -303,6 +304,14 @@ export class DocumentService {
     doc.deleted = true
     await this.em.save(doc)
     await this.contentModel.updateOne({ _id: doc.contentId }, { $set: { deleted: true } })
+
+    try {
+      await this.pipelinePublisher.afterUnpublish(id)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`删除后索引清理投递失败：documentId=${id}, error=${message}`)
+    }
+
     return { id, deleted: true }
   }
 

@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-08-26 09:29:18
+ * @LastEditTime: 2026-09-01 15:34:03
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/pipeline/pipeline.module.ts
  */
@@ -13,10 +13,11 @@ import { ChunkingService } from './chunking.service'
 import { EmbeddingService } from './embedding.service'
 import { PipelineOrchestrator } from './pipeline.orchestrator'
 import { VectorIndexService } from './vector-index.service'
+import { SearchIndexService } from './search-index.service'
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: DocumentContent.name, schema: DocumentContentSchema }])],
-  providers: [ChunkingService, EmbeddingService, VectorIndexService, PipelineOrchestrator],
-  exports: [PipelineOrchestrator, VectorIndexService],
+  providers: [ChunkingService, EmbeddingService, VectorIndexService, PipelineOrchestrator, SearchIndexService],
+  exports: [PipelineOrchestrator, VectorIndexService, SearchIndexService],
 })
 export class PipelineModule {}

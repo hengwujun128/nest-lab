@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-08-25 19:05:37
+ * @LastEditTime: 2026-09-01 14:21:45
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/mq.constants.ts
  */
@@ -13,11 +13,32 @@
  * 队列名带 `kh.` 前缀，避免和本机同时跑的其他项目冲突。
  */
 
-/** RAG 重建索引交换机（topic） */
+/* ----------------------------------- 交换机 ---------------------------------- */
+
+/** RAG 语义检索交换机（topic） */
 export const RAG_REINDEX_EXCHANGE = 'rag.reindex.exchange'
 
-/** 本服务消费的队列 */
+/** 文档级搜索(全文检索)交换机（topic） */
+export const SEARCH_INDEX_EXCHANGE = 'search.index.exchange'
+
+/* ---------------------------------- 消息队列 ---------------------------------- */
+
+/** 语义检索队列 */
 export const RAG_REINDEX_QUEUE = 'kh.rag.reindex.queue'
 
-/** 路由键：按文档 ID 重建 */
+/** 文档级搜索(全文检索)队列 */
+export const SEARCH_INDEX_QUEUE = 'kh.search.index.queue'
+
+/* ----------------------------------- 路由键 ---------------------------------- */
+
+/** 路由键：RAG 语义检索 */
 export const RAG_RK_BY_IDS = 'rag.reindex.by_ids'
+
+/** 路由键：RAG 语义检索删除 */
+export const RAG_RK_DELETE = 'rag.reindex.delete'
+
+/** 路由键：全文检索 */
+export const SEARCH_RK_INDEX = 'search.index.document'
+
+/** 路由键：全文检索删除 */
+export const SEARCH_RK_DELETE = 'search.index.delete'

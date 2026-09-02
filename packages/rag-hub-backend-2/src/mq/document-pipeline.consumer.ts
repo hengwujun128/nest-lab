@@ -2,15 +2,15 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-08-26 09:38:33
+ * @LastEditTime: 2026-09-01 14:51:00
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/document-pipeline.consumer.ts
  */
 import { Injectable, Logger } from '@nestjs/common'
 import { ConsumeMessage } from 'amqplib'
 import { PipelineOrchestrator } from '../pipeline/pipeline.orchestrator'
-import { RAG_REINDEX_QUEUE } from './mq.constants'
-import { ReindexMessage } from './messages/pipeline.messages'
+import { RAG_REINDEX_QUEUE, SEARCH_INDEX_QUEUE } from './mq.constants'
+import { ReindexMessage, SearchIndexMessage } from './messages/pipeline.messages'
 import { RabbitMqService } from './rabbitmq.service'
 
 /**
@@ -28,7 +28,10 @@ export class DocumentPipelineConsumer {
     private readonly rabbit: RabbitMqService,
     private readonly orchestrator: PipelineOrchestrator,
   ) {
+    // 注册 RAG 语义检索消费者
     this.rabbit.registerHandler(RAG_REINDEX_QUEUE, (msg) => this.handleRag(msg))
+    // 注册全文检索消费者
+    this.rabbit.registerHandler(SEARCH_INDEX_QUEUE, (msg) => this.handleSearch(msg))
   }
 
   /** RAG：分块 → 向量化 → ES kh_chunk（dense_vector） */
@@ -38,6 +41,13 @@ export class DocumentPipelineConsumer {
       `[RAG] type=${body.type}, taskId=${body.taskId}, documentIds=${JSON.stringify(body.documentIds ?? [])}`,
     )
     await this.orchestrator.handleRagReindex(body.type, body.documentIds)
+  }
+
+  /** Search：文档级关键词索引（Elasticsearch kh_document） */
+  private async handleSearch(msg: ConsumeMessage) {
+    const body = this.parseJson<SearchIndexMessage>(msg)
+    this.logger.log(`[Search] type=${body.type}, taskId=${body.taskId}, documentId=${body.documentId}`)
+    await this.orchestrator.handleSearchIndex(body.type, body.documentId, body.document)
   }
 
   private parseJson<T>(msg: ConsumeMessage): T {

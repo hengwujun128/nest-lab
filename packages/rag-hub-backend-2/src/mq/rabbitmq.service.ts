@@ -3,7 +3,17 @@ import { ConfigService } from '@nestjs/config'
 import amqp from 'amqp-connection-manager'
 import type { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-manager'
 import type { ConfirmChannel, ConsumeMessage } from 'amqplib'
-import { RAG_REINDEX_EXCHANGE, RAG_REINDEX_QUEUE, RAG_RK_BY_IDS } from './mq.constants'
+
+import {
+  RAG_REINDEX_EXCHANGE,
+  RAG_REINDEX_QUEUE,
+  RAG_RK_BY_IDS,
+  RAG_RK_DELETE,
+  SEARCH_INDEX_EXCHANGE,
+  SEARCH_INDEX_QUEUE,
+  SEARCH_RK_DELETE,
+  SEARCH_RK_INDEX,
+} from './mq.constants'
 
 export type MessageHandler = (msg: ConsumeMessage) => Promise<void> | void
 
@@ -150,12 +160,20 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
 
   // NOTE: 声明拓扑
   private async assertTopology(ch: ConfirmChannel) {
+    /* ---------------------------------- RAG 语义检索 ---------------------------------- */
     // 声明交换机: rag.reindex.exchange （topic 类型） 持久化
     await ch.assertExchange(RAG_REINDEX_EXCHANGE, 'topic', { durable: true })
     // 声明队列: kh.rag.reindex.queue 持久化
     await ch.assertQueue(RAG_REINDEX_QUEUE, { durable: true })
     // NOTE: 绑定队列到交换机:  把队列按路由键绑到交换机上，消息才能从交换机流进队列
     await ch.bindQueue(RAG_REINDEX_QUEUE, RAG_REINDEX_EXCHANGE, RAG_RK_BY_IDS)
+    await ch.bindQueue(RAG_REINDEX_QUEUE, RAG_REINDEX_EXCHANGE, RAG_RK_DELETE)
+
+    /* ---------------------------------- 全文检索 ---------------------------------- */
+    await ch.assertExchange(SEARCH_INDEX_EXCHANGE, 'topic', { durable: true })
+    await ch.assertQueue(SEARCH_INDEX_QUEUE, { durable: true })
+    await ch.bindQueue(SEARCH_INDEX_QUEUE, SEARCH_INDEX_EXCHANGE, SEARCH_RK_INDEX)
+    await ch.bindQueue(SEARCH_INDEX_QUEUE, SEARCH_INDEX_EXCHANGE, SEARCH_RK_DELETE)
 
     this.logger.log('RabbitMQ 拓扑已声明（RAG）')
   }
