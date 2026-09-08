@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-01 16:30:46
+ * @LastEditTime: 2026-09-02 16:30:56
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/document-pipeline.publisher.ts
  */
@@ -18,8 +18,12 @@ import {
   SEARCH_INDEX_EXCHANGE,
   SEARCH_RK_INDEX,
   SEARCH_RK_DELETE,
+  // KG 知识图谱相关
+  KG_GRAPH_EXCHANGE,
+  KG_RK_BUILD_BY_IDS,
+  KG_RK_DELETE,
 } from './mq.constants'
-import { ReindexMessage, SearchIndexMessage } from './messages/pipeline.messages'
+import { ReindexMessage, SearchIndexMessage, KgBuildMessage } from './messages/pipeline.messages'
 import { RabbitMqService } from './rabbitmq.service'
 
 /**
@@ -38,12 +42,20 @@ export class DocumentPipelinePublisher {
    * @param document Mongo 正文，用于 Search 消息附带 content 前缀快照
    */
   async afterPublish(document: DocumentEntity, content?: string | null) {
-    await Promise.all([this.triggerRagReindex(document.id), this.triggerSearchIndex(document, content)])
+    await Promise.all([
+      this.triggerRagReindex(document.id),
+      this.triggerSearchIndex(document, content),
+      this.triggerKgBuild(document.id),
+    ])
   }
 
   /** 归档/删除后：通知 RAG / Search 按文档 ID 清理索引 */
   async afterUnpublish(documentId: string) {
-    await Promise.all([this.triggerRagDelete(documentId), this.triggerSearchDelete(documentId)])
+    await Promise.all([
+      this.triggerRagDelete(documentId),
+      this.triggerSearchDelete(documentId),
+      this.triggerKgDelete(documentId),
+    ])
   }
 
   /** RAG：按文档 ID 重建向量块 */
@@ -93,6 +105,28 @@ export class DocumentPipelinePublisher {
     }
     const ok = await this.rabbit.publish(SEARCH_INDEX_EXCHANGE, SEARCH_RK_DELETE, message)
     this.logger.log(`ES 搜索索引${ok ? '已投递' : '投递失败'}：documentId=${documentId}, taskId=${message.taskId}`)
+  }
+
+  /** KG：按文档 ID 建图谱 */
+  private async triggerKgBuild(documentId: string) {
+    const message: KgBuildMessage = {
+      taskId: randomUUID(),
+      type: 'BUILD_BY_DOC_IDS',
+      documentIds: [documentId],
+    }
+    const ok = await this.rabbit.publish(KG_GRAPH_EXCHANGE, KG_RK_BUILD_BY_IDS, message)
+    this.logger.log(`KG 建图${ok ? '已投递' : '投递失败'}：documentId=${documentId}, taskId=${message.taskId}`)
+  }
+
+  /** KG：按文档 ID 删除图谱 */
+  private async triggerKgDelete(documentId: string) {
+    const message: KgBuildMessage = {
+      taskId: randomUUID(),
+      type: 'DELETE_BY_DOC_IDS',
+      documentIds: [documentId],
+    }
+    const ok = await this.rabbit.publish(KG_GRAPH_EXCHANGE, KG_RK_DELETE, message)
+    this.logger.log(`KG 删图${ok ? '已投递' : '投递失败'}：documentId=${documentId}, taskId=${message.taskId}`)
   }
 
   /** 组装写入 ES kh_document 的文档快照 */

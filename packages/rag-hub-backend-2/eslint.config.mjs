@@ -1,10 +1,11 @@
 // @ts-check
 import eslint from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: ['eslint.config.mjs'],
   },
@@ -19,7 +20,8 @@ export default tseslint.config(
       },
       sourceType: 'commonjs',
       parserOptions: {
-        projectService: true,
+        // projectService 在 pnpm + neo4j-driver 下会把 driver/auth 解析成 error type
+        project: ['./tsconfig.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },

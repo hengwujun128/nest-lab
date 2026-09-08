@@ -117,6 +117,12 @@ catalogs:
     mongoose:
       specifier: ^9.8.0
       version: 9.8.0
+    neo4j-driver:
+      specifier: ^6.2.0
+      version: 6.2.0
+    neo4j-driver-core:
+      specifier: ^6.2.0
+      version: 6.2.0
     pg:
       specifier: ^8.22.0
       version: 8.22.0
@@ -159,6 +165,9 @@ catalogs:
     typescript-eslint:
       specifier: ^8.65.0
       version: 8.65.0
+    zod:
+      specifier: ^4.5.4
+      version: 4.5.4
 
 importers:
 
@@ -465,13 +474,13 @@ importers:
         version: 8.19.2
       '@langchain/core':
         specifier: 'catalog:'
-        version: 1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3))
+        version: 1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4))
       '@langchain/openai':
         specifier: 'catalog:'
-        version: 1.5.10(@aws-sdk/credential-provider-node@3.972.71)(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3)))(@smithy/signature-v4@5.6.9)
+        version: 1.5.10(@aws-sdk/credential-provider-node@3.972.71)(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4)))(@smithy/signature-v4@5.6.9)
       '@langchain/textsplitters':
         specifier: 'catalog:'
-        version: 1.0.1(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3)))
+        version: 1.0.1(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4)))
       '@nestjs/common':
         specifier: 'catalog:'
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -526,6 +535,12 @@ importers:
       multer:
         specifier: ^2.2.0
         version: 2.2.0
+      neo4j-driver:
+        specifier: 'catalog:'
+        version: 6.2.0
+      neo4j-driver-core:
+        specifier: 'catalog:'
+        version: 6.2.0
       officeparser:
         specifier: ^7.4.0
         version: 7.4.0
@@ -556,6 +571,9 @@ importers:
       uuid:
         specifier: ^14.0.1
         version: 14.0.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.5.4
     devDependencies:
       '@eslint/eslintrc':
         specifier: 'catalog:'
@@ -2428,6 +2446,9 @@ packages:
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
+  buffer@6.0.3:
+    resolution: {integrity: sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==}
+
   buffers@0.1.1:
     resolution: {integrity: sha512-9q/rDEGSb/Qsvv2qvzIzdluL5k7AaJOTrw23z9reQthrbF7is4CtlT0DXyO1oei2DCp4uojjzQ7igaSHp1kAEQ==}
     engines: {node: '>=0.2.0'}
@@ -3838,6 +3859,16 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
+  neo4j-driver-bolt-connection@6.2.0:
+    resolution: {integrity: sha512-SEnFSBfumleDxmDAZKkjXxZ5LgL2iZSTx08sO+qXX45ZKaxZJOcg9oxwoXACXZ1RbIq3XbDfHU8I5tExanYEOA==}
+
+  neo4j-driver-core@6.2.0:
+    resolution: {integrity: sha512-U8PSdvDECWmCgSWyhqNNVzMONXFHWPcTd5gqi12+EDxxt0aETA0m+XCXf9H7q6qQXdisc40rUJEOcVQOu6peEA==}
+
+  neo4j-driver@6.2.0:
+    resolution: {integrity: sha512-9W/Tk7EyjZHtv87NFpqoIbl0mlQx8bX8phUFzAM9xmeJrRpGDvqkpdQzc11DjwzywQCdhifaZPSvokSnAp7YTg==}
+    engines: {node: '>=18.0.0'}
+
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
 
@@ -4976,8 +5007,8 @@ packages:
   zlibjs@0.3.1:
     resolution: {integrity: sha512-+J9RrgTKOmlxFSDHo0pI1xM6BLVUv+o0ZT9ANtCxGkjIVCCUdx9alUF8Gm+dGLKbkkkidWIHFDZHDMpfITt4+w==}
 
-  zod@4.4.3:
-    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+  zod@4.5.4:
+    resolution: {integrity: sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==}
 
 snapshots:
 
@@ -5843,15 +5874,15 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3))':
+  '@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4))':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@standard-schema/spec': 1.1.0
       js-tiktoken: 1.0.21
-      langsmith: 0.9.0(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3))
+      langsmith: 0.9.0(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4))
       mustache: 4.2.0
       p-queue: 6.6.2
-      zod: 4.4.3
+      zod: 4.5.4
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - '@opentelemetry/exporter-trace-otlp-proto'
@@ -5859,21 +5890,21 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/openai@1.5.10(@aws-sdk/credential-provider-node@3.972.71)(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3)))(@smithy/signature-v4@5.6.9)':
+  '@langchain/openai@1.5.10(@aws-sdk/credential-provider-node@3.972.71)(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4)))(@smithy/signature-v4@5.6.9)':
     dependencies:
-      '@langchain/core': 1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3))
+      '@langchain/core': 1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4))
       js-tiktoken: 1.0.21
-      openai: 7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3)
-      zod: 4.4.3
+      openai: 7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4)
+      zod: 4.5.4
     transitivePeerDependencies:
       - '@aws-sdk/credential-provider-node'
       - '@smithy/hash-node'
       - '@smithy/signature-v4'
       - ws
 
-  '@langchain/textsplitters@1.0.1(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3)))':
+  '@langchain/textsplitters@1.0.1(@langchain/core@1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4)))':
     dependencies:
-      '@langchain/core': 1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3))
+      '@langchain/core': 1.2.9(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4))
       js-tiktoken: 1.0.21
 
   '@lukeed/csprng@1.1.0': {}
@@ -7129,6 +7160,11 @@ snapshots:
   buffer-indexof-polyfill@1.0.2: {}
 
   buffer@5.7.1:
+    dependencies:
+      base64-js: 1.5.1
+      ieee754: 1.2.1
+
+  buffer@6.0.3:
     dependencies:
       base64-js: 1.5.1
       ieee754: 1.2.1
@@ -8416,12 +8452,12 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  langsmith@0.9.0(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3)):
+  langsmith@0.9.0(@opentelemetry/api@1.9.1)(openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4)):
     dependencies:
       p-queue: 6.6.2
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
-      openai: 7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3)
+      openai: 7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4)
 
   lazystream@1.0.1:
     dependencies:
@@ -8655,6 +8691,20 @@ snapshots:
 
   neo-async@2.6.2: {}
 
+  neo4j-driver-bolt-connection@6.2.0:
+    dependencies:
+      buffer: 6.0.3
+      neo4j-driver-core: 6.2.0
+      string_decoder: 1.3.0
+
+  neo4j-driver-core@6.2.0: {}
+
+  neo4j-driver@6.2.0:
+    dependencies:
+      neo4j-driver-bolt-connection: 6.2.0
+      neo4j-driver-core: 6.2.0
+      rxjs: 7.8.2
+
   node-abort-controller@3.1.1: {}
 
   node-emoji@1.11.0:
@@ -8704,11 +8754,11 @@ snapshots:
     dependencies:
       mimic-fn: 2.1.0
 
-  openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.4.3):
+  openai@7.5.0(@aws-sdk/credential-provider-node@3.972.71)(@smithy/signature-v4@5.6.9)(zod@4.5.4):
     optionalDependencies:
       '@aws-sdk/credential-provider-node': 3.972.71
       '@smithy/signature-v4': 5.6.9
-      zod: 4.4.3
+      zod: 4.5.4
 
   opencollective-postinstall@2.0.3: {}
 
@@ -9729,4 +9779,4 @@ snapshots:
 
   zlibjs@0.3.1: {}
 
-  zod@4.4.3: {}
+  zod@4.5.4: {}

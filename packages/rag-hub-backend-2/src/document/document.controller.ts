@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-23 13:31:18
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-08-25 16:49:31
+ * @LastEditTime: 2026-09-02 16:05:23
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/document/document.controller.ts
  */
@@ -58,7 +58,7 @@ export class DocumentController {
     return this.documentService.findAll(query)
   }
 
-  /** 直接发布文档（无审核；发布后 MQ 异步触发 RAG / KG / ES） */
+  /**  直接发布文档（无审核；发布后 MQ 异步触发 RAG / KG / ES） */
   @Put(':id/publish')
   publish(@Param('id') id: string) {
     return this.documentService.publish(id)

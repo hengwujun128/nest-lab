@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-08-26 15:31:08
+ * @LastEditTime: 2026-09-03 10:03:41
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/pipeline/types/pipeline.types.ts
  */
@@ -36,6 +36,30 @@ export interface DocumentChunk {
   publishTime?: string | null
   /** 向量；分块阶段为空，EmbeddingService 填充后写入 ES dense_vector */
   embedding?: number[]
+}
+
+/** 图谱实体（如「张三」「入职流程」「知识库」） */
+export interface ExtractedEntity {
+  name: string
+  /** PERSON / ORGANIZATION / CONCEPT / DOCUMENT / PROCESS / PRODUCT 等，见 docs/kg-extraction-schema.md */
+  type: string
+  description?: string
+  aliases?: string[]
+}
+
+/** 实体间关系：source -[relation]-> target */
+export interface ExtractedRelation {
+  source: string
+  target: string
+  relation: string
+  weight?: number
+}
+
+/** 单个 chunk 的抽取结果 */
+export interface ExtractionResult {
+  chunkId?: string
+  entities: ExtractedEntity[]
+  relations: ExtractedRelation[]
 }
 
 /**

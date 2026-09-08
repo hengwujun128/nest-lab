@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-01 14:38:10
+ * @LastEditTime: 2026-09-02 16:19:14
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/messages/pipeline.messages.ts
  */
@@ -24,4 +24,13 @@ export interface SearchIndexMessage {
   documentId: string
   /** INDEX 时附带的文档快照；DELETE 时可省略 */
   document?: Record<string, unknown>
+}
+
+/** KG 建图 / 删图消息 */
+export type KgBuildType = 'BUILD_ALL' | 'BUILD_BY_DOC_IDS' | 'DELETE_BY_DOC_IDS'
+
+export interface KgBuildMessage {
+  taskId: string
+  type: KgBuildType
+  documentIds?: string[]
 }

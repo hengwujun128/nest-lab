@@ -53,3 +53,6 @@ catalog:
   js-tiktoken: ^1.0.21
   '@langchain/openai': ^1.5.10
   '@elastic/elasticsearch': ^8.17.0
+  zod: ^4.5.4
+  neo4j-driver: ^6.2.0
+  neo4j-driver-core: ^6.2.0

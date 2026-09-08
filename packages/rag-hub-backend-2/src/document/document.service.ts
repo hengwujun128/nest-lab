@@ -249,7 +249,9 @@ export class DocumentService {
    * 4. 投递失败只打日志，不回滚「已发布」状态
    *
    * 异步消费侧见 DocumentPipelineConsumer → PipelineOrchestrator：
-   * 分块(ChunkingService) → 嵌入 → ES(kh_chunk)
+   * RAG：分块(ChunkingService) → 嵌入 → ES(kh_chunk)
+   * Search：整篇快照 → ES(kh_document)
+   * KG：分块 → 抽实体关系 → Neo4j
    */
 
   async publish(id: string) {
@@ -259,7 +261,7 @@ export class DocumentService {
       where: { id, deleted: false },
     })
     if (!doc) {
-      throw new NotFoundException(`Document ${id} not found`)
+      throw new NotFoundException(`Document ${id} is not found`)
     }
 
     // 仅草稿 / 已发布可发布（已发布再次发布会重建索引）
