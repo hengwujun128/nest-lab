@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-08-31 16:35:46
+ * @LastEditTime: 2026-09-09 15:49:14
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -14,6 +14,8 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { DocumentModule } from './document/document.module'
 import { DocumentEntity } from './document/entities/document.entity'
+import { DocumentReviewEntity } from './document/entities/document-review.entity'
+
 import { StorageModule } from './storage/storage.module'
 import { PipelineModule } from './pipeline/pipeline.module'
 import { MqModule } from './mq/mq.module'
@@ -33,8 +35,8 @@ import { MqModule } from './mq/mq.module'
         username: config.get<string>('POSTGRES_USER', 'user'),
         password: config.get<string>('POSTGRES_PASSWORD', '123456'),
         database: config.get<string>('POSTGRES_DB', 'knowledge_hub'),
-        entities: [DocumentEntity],
-        synchronize: false,
+        entities: [DocumentEntity, DocumentReviewEntity],
+        synchronize: false, // 继续关着，别靠 sync 建表
       }),
     }),
     MongooseModule.forRootAsync({

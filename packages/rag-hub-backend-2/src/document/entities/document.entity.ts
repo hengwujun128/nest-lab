@@ -1,15 +1,11 @@
 import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm'
 import { bigintTransformer } from '../../common/transformers/bigint.transformer'
 
-/** 文档状态 */
-export enum DocumentStatus {
-  /** 草稿 */
-  Draft = 0,
-  /** 已发布 */
-  Published = 1,
-  /** 已归档：不会作为知识被检索 */
-  Archived = 2,
-}
+import { DocumentStatus } from '../document-status'
+
+// 把原来在 entity 中的 类型定义提取出来
+export { DocumentStatus }
+
 /*
  * NOTE:
  *和 Mongoose 一样——TypeORM Entity 的字段由 ORM 在 create/find 时注入，
