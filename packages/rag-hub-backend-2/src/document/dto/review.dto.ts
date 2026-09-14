@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-08 16:05:25
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-08 19:04:49
+ * @LastEditTime: 2026-09-11 17:15:43
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/document/dto/review.dto.ts
  */
@@ -32,19 +32,11 @@ export class QueryReviewTasksDto {
 
 /**
  * 审核通过 / 驳回请求体
- * reviewerId、reviewerName 暂由前端传入；接入鉴权后改从登录用户取
+ * 审核通过 / 驳回请求体（审核人信息从 JWT 取，不在 body 传）
  */
 export class ReviewDecisionDto {
   /** 审核意见（驳回时必填） */
   @IsOptional()
   @IsString()
   reviewComment?: string
-
-  @IsOptional()
-  @IsString()
-  reviewerId?: string
-
-  @IsOptional()
-  @IsString()
-  reviewerName?: string
 }

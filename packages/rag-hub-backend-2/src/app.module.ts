@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-09 15:49:14
+ * @LastEditTime: 2026-09-14 11:14:44
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -15,10 +15,14 @@ import { AppService } from './app.service'
 import { DocumentModule } from './document/document.module'
 import { DocumentEntity } from './document/entities/document.entity'
 import { DocumentReviewEntity } from './document/entities/document-review.entity'
+import { UserEntity } from './user/entities/user.entity'
+import { RoleEntity } from './user/entities/role.entity'
+import { UserRoleEntity } from './user/entities/user-role.entity'
 
 import { StorageModule } from './storage/storage.module'
 import { PipelineModule } from './pipeline/pipeline.module'
 import { MqModule } from './mq/mq.module'
+import { AuthModule } from './auth/auth.module'
 
 @Module({
   imports: [
@@ -35,7 +39,7 @@ import { MqModule } from './mq/mq.module'
         username: config.get<string>('POSTGRES_USER', 'user'),
         password: config.get<string>('POSTGRES_PASSWORD', '123456'),
         database: config.get<string>('POSTGRES_DB', 'knowledge_hub'),
-        entities: [DocumentEntity, DocumentReviewEntity],
+        entities: [DocumentEntity, DocumentReviewEntity, UserEntity, RoleEntity, UserRoleEntity],
         synchronize: false, // 继续关着，别靠 sync 建表
       }),
     }),
@@ -49,6 +53,7 @@ import { MqModule } from './mq/mq.module'
       }),
     }),
     DocumentModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
