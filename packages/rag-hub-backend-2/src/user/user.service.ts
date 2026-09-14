@@ -20,6 +20,10 @@ export class UserService {
     private readonly userRoleRepo: Repository<UserRoleEntity>,
   ) {}
 
+  async findByEmail(email: string): Promise<UserEntity | null> {
+    return this.userRepo.findOne({ where: { email, deleted: false } })
+  }
+
   async findByUsername(username: string): Promise<UserEntity | null> {
     return this.userRepo.findOne({
       where: { username, deleted: false },
@@ -88,24 +92,33 @@ export class UserService {
     password: string
     email?: string
     realName?: string
-  }): Promise<{ userId: string }> {
+    requireEmailVerification?: boolean
+  }): Promise<{ userId: string; emailVerificationRequired?: boolean }> {
     const exists = await this.findByUsername(input.username)
     if (exists) {
       throw new ConflictException('用户名已存在')
     }
 
+    if (input.email) {
+      const emailUsed = await this.findByEmail(input.email)
+      if (emailUsed) throw new ConflictException('邮箱已被使用')
+    }
+
     const userId = nextSnowflakeId()
+    const needVerify = input.requireEmailVerification && !!input.email
+
     const user = this.userRepo.create({
       id: userId,
       username: input.username,
       password: await hash(input.password, 10),
       email: input.email ?? null,
       realName: input.realName ?? null,
-      status: 1,
+      status: needVerify ? 0 : 1,
+      emailVerified: needVerify ? 0 : 1,
     })
     await this.userRepo.save(user)
     await this.assignRole(userId, RoleCode.USER)
-    return { userId }
+    return { userId, emailVerificationRequired: needVerify }
   }
 
   async assignRole(userId: string, roleCode: string): Promise<void> {

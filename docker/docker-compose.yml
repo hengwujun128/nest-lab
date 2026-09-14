@@ -94,6 +94,38 @@ services:
       mongodb:
         condition: service_healthy
 
+  # Redis — 密码重置验证码等
+  redis:
+    image: redis:7-alpine
+    container_name: nest-lab-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      # - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/redis:/data
+      - ./volumes/redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Web GUI: RedisInsight
+  redisinsight:
+    image: redis/redisinsight:2.50
+    container_name: nest-lab-redisinsight
+    restart: always
+    ports:
+      - '5540:5540'
+    volumes:
+      # - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/redisinsight:/data
+      - ./volumes/redisinsight:/data
+    environment:
+      - RI_HOST=0.0.0.0
+    depends_on:
+      redis:
+        condition: service_healthy
+
   # RustFS（S3 兼容对象存储）
   # 文档：https://docs.rustfs.com/installation/docker/
   rustfs:

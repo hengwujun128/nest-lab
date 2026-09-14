@@ -2,17 +2,19 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-10 11:39:33
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-12 19:04:53
+ * @LastEditTime: 2026-09-14 15:22:05
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/auth/auth.service.ts
  */
 
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
 import { AuthUser } from './auth-user.interface'
 import { LoginDto, RegisterDto } from './dto/auth.dto'
 import { UserService } from '../user/user.service'
+import { EmailActivationService } from './email-activation.service'
+import { EmailService } from './email.service'
 
 export interface LoginResult {
   accessToken: string
@@ -34,6 +36,8 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly emailActivation: EmailActivationService,
+    private readonly emailService: EmailService,
   ) {}
 
   private accessExpires(): string {
@@ -54,6 +58,10 @@ export class AuthService {
     if (unit === 'm') return n * 60
     if (unit === 'h') return n * 3600
     return n * 86400
+  }
+
+  private requireEmailVerification(): boolean {
+    return this.config.get<string>('REQUIRE_EMAIL_VERIFICATION', 'false') === 'true'
   }
 
   private signAccessToken(user: AuthUser): string {
@@ -87,10 +95,30 @@ export class AuthService {
     return this.buildLoginResult(user)
   }
 
-  async register(dto: RegisterDto): Promise<{ userId: string; message: string }> {
-    const { userId } = await this.userService.register(dto)
+  async register(dto: RegisterDto): Promise<{ userId: string; message: string; emailVerificationRequired?: boolean }> {
+    const result = await this.userService.register({
+      ...dto,
+      requireEmailVerification: this.requireEmailVerification(),
+    })
+
+    // 如果需要邮箱验证，则发送激活邮件
+    if (result.emailVerificationRequired && dto.email) {
+      const token = await this.emailActivation.createToken(result.userId)
+      try {
+        await this.emailService.sendActivationEmail(dto.email, dto.username, token)
+      } catch {
+        await this.emailActivation.deleteByToken(token)
+        throw new BadRequestException('激活邮件发送失败，请稍后再试')
+      }
+      return {
+        userId: result.userId,
+        message: '注册成功，请查收邮件激活账户',
+        emailVerificationRequired: true,
+      }
+    }
+
     return {
-      userId,
+      userId: result.userId,
       message: '注册成功，请登录',
     }
   }
