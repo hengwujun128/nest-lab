@@ -21,6 +21,7 @@ import { UserService } from '../user/user.service'
 import { UserEntity } from '../user/entities/user.entity'
 import { RoleEntity } from '../user/entities/role.entity'
 import { UserRoleEntity } from '../user/entities/user-role.entity'
+import { DocumentEntity } from '../document/entities/document.entity'
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { UserRoleEntity } from '../user/entities/user-role.entity'
         secret: config.get<string>('JWT_SECRET', 'dev-secret-change-me'),
       }),
     }),
-    TypeOrmModule.forFeature([UserEntity, RoleEntity, UserRoleEntity]),
+    TypeOrmModule.forFeature([UserEntity, RoleEntity, UserRoleEntity, DocumentEntity]),
   ],
   controllers: [AuthController],
   providers: [

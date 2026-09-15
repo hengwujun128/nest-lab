@@ -2,12 +2,12 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-10 11:39:33
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-14 15:22:05
+ * @LastEditTime: 2026-09-14 16:43:37
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/auth/auth.service.ts
  */
 
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
 import { AuthUser } from './auth-user.interface'
@@ -15,6 +15,10 @@ import { LoginDto, RegisterDto } from './dto/auth.dto'
 import { UserService } from '../user/user.service'
 import { EmailActivationService } from './email-activation.service'
 import { EmailService } from './email.service'
+
+import { ResetPasswordByEmailDto, SendResetCodeDto } from '../user/dto/extra.dto'
+
+import { PasswordResetService, RESET_CODE_COOLDOWN_SECONDS, RESET_CODE_TTL_SECONDS } from './password-reset.service'
 
 export interface LoginResult {
   accessToken: string
@@ -38,6 +42,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly emailActivation: EmailActivationService,
     private readonly emailService: EmailService,
+    private readonly passwordReset: PasswordResetService,
   ) {}
 
   private accessExpires(): string {
@@ -121,6 +126,49 @@ export class AuthService {
       userId: result.userId,
       message: '注册成功，请登录',
     }
+  }
+
+  /** 验证邮箱(用户点击邮箱激活链接时调用, 验证token是否有效,并更新用户状态) */
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const userId = await this.emailActivation.consumeToken(token)
+    if (!userId) {
+      throw new BadRequestException('激活链接无效或已过期')
+    }
+    const message = await this.userService.activateEmail(userId)
+    return { message }
+  }
+
+  /** 发送重置密码验证码(用户点击重置密码链接时调用) */
+  async sendResetCode(dto: SendResetCodeDto): Promise<{ message: string }> {
+    const user = await this.userService.findByEmail(dto.email)
+    if (!user) {
+      throw new NotFoundException('该邮箱未注册')
+    }
+
+    // Redis 剩余 TTL：刚发出去时约 600s。剩余 > 540s 说明距上次发送不足 60s，拦截重复发送
+    const ttl = await this.passwordReset.getTtl(dto.email)
+    if (ttl > RESET_CODE_TTL_SECONDS - RESET_CODE_COOLDOWN_SECONDS) {
+      throw new BadRequestException('验证码已发送，请稍后再试')
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000))
+    await this.passwordReset.set(dto.email, code)
+    try {
+      await this.emailService.sendResetCodeEmail(dto.email, user.username, code)
+    } catch {
+      await this.passwordReset.delete(dto.email)
+      throw new BadRequestException('邮件发送失败，请稍后再试')
+    }
+    return { message: '验证码已发送' }
+  }
+
+  async resetPasswordByEmail(dto: ResetPasswordByEmailDto): Promise<{ message: string }> {
+    if (!(await this.passwordReset.verify(dto.email, dto.code))) {
+      throw new BadRequestException('验证码错误或已过期')
+    }
+    await this.userService.resetPasswordByEmail(dto.email, dto.newPassword)
+    await this.passwordReset.delete(dto.email)
+    return { message: '密码重置成功，请登录' }
   }
 
   async refresh(refreshToken: string): Promise<LoginResult> {

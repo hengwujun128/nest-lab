@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-14 13:41:48
+ * @LastEditTime: 2026-09-14 16:55:02
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -24,9 +24,32 @@ import { PipelineModule } from './pipeline/pipeline.module'
 import { MqModule } from './mq/mq.module'
 import { AuthModule } from './auth/auth.module'
 
+/* ----------------------------------- V8 ----------------------------------- */
+import { RedisModule } from './redis/redis.module'
+import { MailerModule } from '@nestjs-modules/mailer'
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    RedisModule,
+    MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get<string>('MAIL_HOST', 'smtp.example.com'),
+          port: config.get<number>('MAIL_PORT', 587),
+          secure: config.get<string>('MAIL_SECURE') === 'true',
+
+          auth: {
+            user: config.get<string>('MAIL_USER', 'your-email@example.com'),
+            pass: config.get<string>('MAIL_PASSWORD', 'your-password'),
+          },
+        },
+        defaults: {
+          from: config.get<string>('MAIL_FROM'),
+        },
+      }),
+    }),
     PipelineModule,
     StorageModule,
     MqModule,
