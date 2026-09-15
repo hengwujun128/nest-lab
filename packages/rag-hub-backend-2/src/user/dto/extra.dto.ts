@@ -1,43 +1,51 @@
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+/*
+ * @Author: 张泽全 hengwujun128@gmail.com
+ * @Date: 2026-09-14 11:35:28
+ * @LastEditors: 张泽全 hengwujun128@gmail.com
+ * @LastEditTime: 2026-09-15 10:05:46
+ * @Description:
+ * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/user/dto/extra.dto.ts
+ */
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 
 export class SendResetCodeDto {
   @IsEmail()
-  email: string;
+  email!: string
 }
 
 export class ResetPasswordByEmailDto {
   @IsEmail()
-  email: string;
+  email!: string
 
   @IsString()
-  code: string;
+  code!: string
 
   @IsString()
   @MinLength(6)
-  newPassword: string;
+  newPassword!: string
 }
 
 export class CreateRoleDto {
   @IsString()
-  roleName: string;
+  roleName!: string
 
   @IsString()
-  roleCode: string;
+  roleCode!: string
 
   @IsOptional()
   @IsString()
-  description?: string;
+  description?: string
 }
 
 export class UpdateRoleDto {
   @IsOptional()
   @IsString()
-  roleName?: string;
+  roleName!: string
 
   @IsOptional()
   @IsString()
-  description?: string;
+  description?: string
 
   @IsOptional()
-  status?: number;
+  status?: number
 }

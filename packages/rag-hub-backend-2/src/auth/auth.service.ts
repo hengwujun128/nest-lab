@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-10 11:39:33
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-14 16:43:37
+ * @LastEditTime: 2026-09-15 10:12:57
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/auth/auth.service.ts
  */
@@ -145,13 +145,14 @@ export class AuthService {
       throw new NotFoundException('该邮箱未注册')
     }
 
-    // Redis 剩余 TTL：刚发出去时约 600s。剩余 > 540s 说明距上次发送不足 60s，拦截重复发送
+    // NOTE:Redis 剩余 TTL：刚发出去时约 600s。剩余 > 540s 说明距上次发送不足 60s，拦截重复发送
     const ttl = await this.passwordReset.getTtl(dto.email)
     if (ttl > RESET_CODE_TTL_SECONDS - RESET_CODE_COOLDOWN_SECONDS) {
       throw new BadRequestException('验证码已发送，请稍后再试')
     }
 
     const code = String(Math.floor(100000 + Math.random() * 900000))
+    // 将验证码存储到 Redis , email 作为 key, code 作为 value
     await this.passwordReset.set(dto.email, code)
     try {
       await this.emailService.sendResetCodeEmail(dto.email, user.username, code)

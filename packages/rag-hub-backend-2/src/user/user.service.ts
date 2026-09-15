@@ -187,6 +187,11 @@ export class UserService {
     return userId
   }
 
+  async getUserRoleCodes(userId: string): Promise<string[]> {
+    await this.findByIdOrThrow(userId)
+    return this.getRoleCodes(userId)
+  }
+
   /** 全量替换用户角色 */
   async replaceRoles(userId: string, roleCodes: string[]): Promise<string[]> {
     await this.findByIdOrThrow(userId)

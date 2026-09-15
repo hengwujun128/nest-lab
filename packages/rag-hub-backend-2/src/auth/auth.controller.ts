@@ -2,20 +2,20 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-10 11:39:33
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-14 15:30:56
+ * @LastEditTime: 2026-09-15 10:06:59
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/auth/auth.controller.ts
  */
 import { Body, Controller, Get, Post, Query } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { LoginDto, RefreshTokenDto, RegisterDto } from './dto/auth.dto'
+import { ResetPasswordByEmailDto, SendResetCodeDto } from '../user/dto/extra.dto'
+
 import { Public } from './decorators/public.decorator'
 import { CurrentUser } from './decorators/current-user.decorator'
 import type { AuthUser } from './auth-user.interface'
 import { Roles } from './decorators/roles.decorator'
 import { RoleCode } from '../common/constants/roles'
-import { SendResetCodeDto } from './dto/send-reset-code.dto'
-import { ResetPasswordByEmailDto } from './dto/reset-password-by-email.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -45,12 +45,14 @@ export class AuthController {
     return this.authService.verifyEmail(token)
   }
 
+  /** 发送重置密码验证码 */
   @Public()
   @Post('password/reset/send-code')
   sendResetCode(@Body() dto: SendResetCodeDto) {
     return this.authService.sendResetCode(dto)
   }
 
+  /** 重置密码 */
   @Public()
   @Post('password/reset')
   resetPassword(@Body() dto: ResetPasswordByEmailDto) {
