@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-14 16:55:02
+ * @LastEditTime: 2026-09-15 11:41:14
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -42,7 +42,9 @@ import { MailerModule } from '@nestjs-modules/mailer'
 
           auth: {
             user: config.get<string>('MAIL_USER', 'your-email@example.com'),
-            pass: config.get<string>('MAIL_PASSWORD', 'your-password'),
+
+            // 优先 MAIL_PASS（.env 常用），兼容 MAIL_PASSWORD
+            pass: config.get<string>('MAIL_PASS') ?? config.get<string>('MAIL_PASSWORD', 'your-password'),
           },
         },
         defaults: {
