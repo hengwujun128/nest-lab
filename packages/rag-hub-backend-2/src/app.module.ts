@@ -18,6 +18,9 @@ import { DocumentReviewEntity } from './document/entities/document-review.entity
 import { UserEntity } from './user/entities/user.entity'
 import { RoleEntity } from './user/entities/role.entity'
 import { UserRoleEntity } from './user/entities/user-role.entity'
+import { PermissionEntity } from './user/entities/permission.entity'
+import { RolePermissionEntity } from './user/entities/role-permission.entity'
+import { UserPermissionEntity } from './user/entities/user-permission.entity'
 
 import { StorageModule } from './storage/storage.module'
 import { PipelineModule } from './pipeline/pipeline.module'
@@ -64,7 +67,16 @@ import { MailerModule } from '@nestjs-modules/mailer'
         username: config.get<string>('POSTGRES_USER', 'user'),
         password: config.get<string>('POSTGRES_PASSWORD', '123456'),
         database: config.get<string>('POSTGRES_DB', 'knowledge_hub'),
-        entities: [DocumentEntity, DocumentReviewEntity, UserEntity, RoleEntity, UserRoleEntity],
+        entities: [
+          DocumentEntity,
+          DocumentReviewEntity,
+          UserEntity,
+          RoleEntity,
+          UserRoleEntity,
+          PermissionEntity,
+          RolePermissionEntity,
+          UserPermissionEntity,
+        ],
         synchronize: false, // 继续关着，别靠 sync 建表
       }),
     }),

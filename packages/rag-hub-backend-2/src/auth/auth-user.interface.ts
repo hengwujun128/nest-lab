@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-10 11:39:33
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-10 14:43:38
+ * @LastEditTime: 2026-09-16 15:13:11
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/auth/auth-user.interface.ts
  */
@@ -14,4 +14,6 @@ export interface AuthUser {
   email?: string | null
   avatar?: string | null
   roles: string[]
+  /** 权限码（直接权限 ∪ 角色权限） */
+  permissions?: string[]
 }

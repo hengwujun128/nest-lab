@@ -21,6 +21,7 @@ import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { UpdateProfileDto } from './dto/profile.dto'
 import { UserVO } from './vo/user.vo'
+import { PermissionService } from './permission.service'
 
 @Injectable()
 export class UserService {
@@ -33,6 +34,7 @@ export class UserService {
     private readonly userRoleRepo: Repository<UserRoleEntity>,
     @InjectRepository(DocumentEntity)
     private readonly documentRepo: Repository<DocumentEntity>,
+    private readonly permissionService: PermissionService,
   ) {}
 
   async findByEmail(email: string): Promise<UserEntity | null> {
@@ -85,7 +87,7 @@ export class UserService {
   }
 
   /** 转换为认证用户 */
-  toAuthUser(user: UserEntity, roles: string[]): AuthUser {
+  toAuthUser(user: UserEntity, roles: string[], permissions: string[]): AuthUser {
     return {
       userId: user.id,
       username: user.username,
@@ -93,6 +95,7 @@ export class UserService {
       email: user.email,
       avatar: user.avatar,
       roles,
+      permissions,
     }
   }
 
@@ -102,8 +105,11 @@ export class UserService {
       throw new UnauthorizedException('账户已禁用')
     }
 
-    const roles = await this.getRoleCodes(userId)
-    return this.toAuthUser(user, roles)
+    const [roles, permissions] = await Promise.all([
+      this.getRoleCodes(userId),
+      this.permissionService.getUserPermissionCodes(userId),
+    ])
+    return this.toAuthUser(user, roles, permissions)
   }
 
   async validateCredentials(username: string, password: string): Promise<AuthUser> {
@@ -123,8 +129,11 @@ export class UserService {
     if (!ok) {
       throw new UnauthorizedException('用户名或密码错误')
     }
-    const roles = await this.getRoleCodes(user.id)
-    return this.toAuthUser(user, roles)
+    const [roles, permissions] = await Promise.all([
+      this.getRoleCodes(user.id),
+      this.permissionService.getUserPermissionCodes(user.id),
+    ])
+    return this.toAuthUser(user, roles, permissions)
   }
 
   /** 注册用户 */

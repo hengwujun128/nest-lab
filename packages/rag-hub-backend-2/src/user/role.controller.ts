@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-14 11:35:28
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-15 10:53:53
+ * @LastEditTime: 2026-09-16 14:13:25
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/user/role.controller.ts
  */
@@ -11,12 +11,19 @@ import { RoleService } from './role.service'
 import { CreateRoleDto, UpdateRoleDto } from './dto/extra.dto'
 import { Roles } from '../auth/decorators/roles.decorator'
 import { RoleCode } from '../common/constants/roles'
+import { PermissionService } from './permission.service'
+
+import { RequirePermission } from '../auth/decorators/require-permission.decorator'
+import { AssignPermissionIdsDto } from './dto/permission.dto'
 
 /** 角色管理 :只有管理员可以访问 */
 @Controller('roles')
 @Roles(RoleCode.ADMIN)
 export class RoleController {
-  constructor(private readonly roleService: RoleService) {}
+  constructor(
+    private readonly roleService: RoleService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   @Get('list')
   async listRoles() {
@@ -68,5 +75,20 @@ export class RoleController {
   async deleteRole(@Param('id') id: string) {
     await this.roleService.delete(id)
     return { message: '删除成功' }
+  }
+
+  @Get(':id/permissions')
+  @RequirePermission('system:role')
+  async getRolePermissions(@Param('id') id: string) {
+    const permissionIds = await this.permissionService.getRolePermissionIds(id)
+    return { roleId: id, permissionIds }
+  }
+
+  /** 分配角色权限 */
+  @Put(':id/permissions')
+  @RequirePermission('system:role')
+  async assignRolePermissions(@Param('id') id: string, @Body() dto: AssignPermissionIdsDto) {
+    const permissionIds = await this.permissionService.assignRolePermissions(id, dto)
+    return { roleId: id, permissionIds }
   }
 }

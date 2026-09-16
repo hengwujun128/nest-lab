@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-14 11:35:28
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-15 10:51:32
+ * @LastEditTime: 2026-09-16 14:40:07
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/user/user.controller.ts
  */
@@ -19,9 +19,16 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import { RoleCode } from '../common/constants/roles'
 import type { AuthUser } from '../auth/auth-user.interface'
 
+import { RequirePermission } from '../auth/decorators/require-permission.decorator'
+import { AssignPermissionIdsDto } from './dto/permission.dto'
+import { PermissionService } from './permission.service'
+
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   /** 当前用户: 更新个人信息 */
   @Put('me')
@@ -101,5 +108,27 @@ export class UserController {
   async assignRoles(@Param('id') id: string, @Body() dto: AssignRolesDto) {
     const roleCodes = await this.userService.replaceRoles(id, dto.roleCodes)
     return { userId: id, roleCodes }
+  }
+
+  /** 获取用户权限(包括权限ids,权限codes) */
+  @Get(':id/permissions')
+  @Roles(RoleCode.ADMIN)
+  @RequirePermission('system:user')
+  async getUserPermissions(@Param('id') id: string) {
+    await this.userService.findByIdOrThrow(id)
+    // (用户权限, 角色权限, 管理员权限)合并后的权限codes
+    const permissionCodes = await this.permissionService.getUserPermissionCodes(id)
+    // 获取用户直接权限ids
+    const permissionIds = await this.permissionService.getUserDirectPermissionIds(id)
+    return { userId: id, permissionCodes, directPermissionIds: permissionIds }
+  }
+  /** 分配用户权限 */
+  @Put(':id/permissions')
+  @Roles(RoleCode.ADMIN)
+  @RequirePermission('system:user')
+  async assignUserPermissions(@Param('id') id: string, @Body() dto: AssignPermissionIdsDto) {
+    await this.userService.findByIdOrThrow(id)
+    const permissionIds = await this.permissionService.assignUserPermissions(id, dto)
+    return { userId: id, permissionIds }
   }
 }

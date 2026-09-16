@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-10 11:39:33
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-15 11:08:03
+ * @LastEditTime: 2026-09-16 15:00:49
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/auth/auth.module.ts
  */
@@ -21,6 +21,7 @@ import { UserModule } from '../user/user.module'
 import { EmailService } from './email.service'
 import { EmailActivationService } from './email-activation.service'
 import { PasswordResetService } from './password-reset.service'
+import { PermissionsGuard } from './permissions.guard'
 
 @Module({
   imports: [
@@ -50,6 +51,10 @@ import { PasswordResetService } from './password-reset.service'
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
     },
   ],
   exports: [AuthService, UserModule],
