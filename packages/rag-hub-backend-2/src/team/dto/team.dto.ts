@@ -2,43 +2,32 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-15 16:19:17
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-16 09:56:42
+ * @LastEditTime: 2026-09-16 15:21:48
  * @Description:
- * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/user/dto/permission.dto.ts
+ * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/team/dto/team.dto.ts
  */
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
 import { Type } from 'class-transformer'
-import { IsArray, IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
 
-export class CreatePermissionDto {
+export class CreateTeamDto {
   @IsString()
-  permissionName!: string
+  teamName?: string
 
+  @IsOptional()
   @IsString()
-  permissionCode!: string
+  teamCode?: string
 
-  @Type(() => Number)
-  @IsInt()
-  permissionType!: number
+  @IsOptional()
+  @IsString()
+  description?: string
+
+  @IsOptional()
+  @IsString()
+  leaderId?: string
 
   @IsOptional()
   @IsString()
   parentId?: string
-
-  @IsOptional()
-  @IsString()
-  menuUrl?: string
-
-  @IsOptional()
-  @IsString()
-  apiUrl?: string
-
-  @IsOptional()
-  @IsString()
-  method?: string
-
-  @IsOptional()
-  @IsString()
-  icon?: string
 
   @IsOptional()
   @Type(() => Number)
@@ -51,39 +40,26 @@ export class CreatePermissionDto {
   status?: number
 }
 
-export class UpdatePermissionDto {
+export class UpdateTeamDto {
   @IsOptional()
   @IsString()
-  permissionName?: string
+  teamName?: string
 
   @IsOptional()
   @IsString()
-  permissionCode?: string
+  teamCode?: string
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  permissionType?: number
+  @IsString()
+  description?: string
+
+  @IsOptional()
+  @IsString()
+  leaderId?: string
 
   @IsOptional()
   @IsString()
   parentId?: string
-
-  @IsOptional()
-  @IsString()
-  menuUrl?: string
-
-  @IsOptional()
-  @IsString()
-  apiUrl?: string
-
-  @IsOptional()
-  @IsString()
-  method?: string
-
-  @IsOptional()
-  @IsString()
-  icon?: string
 
   @IsOptional()
   @Type(() => Number)
@@ -96,10 +72,15 @@ export class UpdatePermissionDto {
   status?: number
 }
 
-export class QueryPermissionDto {
+export class QueryTeamDto {
   @IsOptional()
   @IsString()
   keyword?: string
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  status?: number
 
   @IsOptional()
   @Type(() => Number)
@@ -113,10 +94,4 @@ export class QueryPermissionDto {
   @Min(1)
   @Max(100)
   pageSize?: number = 20
-}
-
-export class AssignPermissionIdsDto {
-  @IsArray()
-  @IsString({ each: true })
-  permissionIds!: string[]
 }

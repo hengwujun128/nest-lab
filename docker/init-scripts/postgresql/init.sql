@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-22 15:25:00
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-15 16:29:07
+ * @LastEditTime: 2026-09-16 15:17:15
  * @Description: 
  * @FilePath: /nest-lab/docker/init-scripts/postgresql/init.sql
  */
@@ -186,7 +186,7 @@ INSERT INTO kh_role_permission (id, role_id, permission_id) VALUES
     (4100000000000000008, 2000000000000000003, 4000000000000000004)
 ON CONFLICT (id) DO NOTHING;
 
--- ==================== 团队 ====================
+-- ==================== 团队(组织) ====================
 
 CREATE TABLE IF NOT EXISTS kh_team (
     id BIGINT PRIMARY KEY,                          -- 团队 ID（雪花）

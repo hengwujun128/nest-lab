@@ -80,16 +80,16 @@ export class PermissionService {
   async update(id: string, dto: UpdatePermissionDto) {
     const perm = await this.getById(id)
 
-    // 判断权限码是否存在
-    const exists = await this.permRepo.findOne({
-      where: { permissionCode: dto.permissionCode, deleted: false },
-    })
-    // 排除自身：同 code 再赋值无妨，只防和其他权限冲突
-    if (exists && exists.id !== id) {
-      throw new ConflictException('权限编码已存在')
+    if (dto.permissionCode !== undefined) {
+      const exists = await this.permRepo.findOne({
+        where: { permissionCode: dto.permissionCode, deleted: false },
+      })
+      // 排除自身：同 code 再赋值无妨，只防和其他权限冲突
+      if (exists && exists.id !== id) {
+        throw new ConflictException('权限编码已存在')
+      }
+      perm.permissionCode = dto.permissionCode
     }
-    // 赋值权限码
-    perm.permissionCode = dto.permissionCode
 
     if (dto.permissionName !== undefined) perm.permissionName = dto.permissionName
     if (dto.permissionType !== undefined) perm.permissionType = dto.permissionType

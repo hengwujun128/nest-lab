@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-15 11:41:14
+ * @LastEditTime: 2026-09-16 15:52:39
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -21,6 +21,8 @@ import { UserRoleEntity } from './user/entities/user-role.entity'
 import { PermissionEntity } from './user/entities/permission.entity'
 import { RolePermissionEntity } from './user/entities/role-permission.entity'
 import { UserPermissionEntity } from './user/entities/user-permission.entity'
+import { TeamEntity } from './team/entities/team.entity'
+import { TeamMemberEntity } from './team/entities/team-member.entity'
 
 import { StorageModule } from './storage/storage.module'
 import { PipelineModule } from './pipeline/pipeline.module'
@@ -30,6 +32,8 @@ import { AuthModule } from './auth/auth.module'
 /* ----------------------------------- V8 ----------------------------------- */
 import { RedisModule } from './redis/redis.module'
 import { MailerModule } from '@nestjs-modules/mailer'
+/* ----------------------------------- v9 ----------------------------------- */
+import { TeamModule } from './team/team.module'
 
 @Module({
   imports: [
@@ -76,6 +80,8 @@ import { MailerModule } from '@nestjs-modules/mailer'
           PermissionEntity,
           RolePermissionEntity,
           UserPermissionEntity,
+          TeamEntity,
+          TeamMemberEntity,
         ],
         synchronize: false, // 继续关着，别靠 sync 建表
       }),
@@ -91,6 +97,7 @@ import { MailerModule } from '@nestjs-modules/mailer'
     }),
     DocumentModule,
     AuthModule,
+    TeamModule,
   ],
   controllers: [AppController],
   providers: [AppService],
