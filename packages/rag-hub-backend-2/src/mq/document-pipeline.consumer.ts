@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-02 16:39:02
+ * @LastEditTime: 2026-09-17 10:21:03
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/document-pipeline.consumer.ts
  */
@@ -49,7 +49,7 @@ export class DocumentPipelineConsumer {
   private async handleSearch(msg: ConsumeMessage) {
     const body = this.parseJson<SearchIndexMessage>(msg)
     this.logger.log(`[Search] type=${body.type}, taskId=${body.taskId}, documentId=${body.documentId}`)
-    await this.orchestrator.handleSearchIndex(body.type, body.documentId, body.document)
+    await this.orchestrator.handleSearchIndex(body.type, body.documentId)
   }
 
   /** KG：分块 → 抽实体关系 → Neo4j */

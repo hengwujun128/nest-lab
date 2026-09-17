@@ -315,7 +315,7 @@ export class DocumentService {
     if (doc.status === DocumentStatus.PendingReview) {
       throw new BadRequestException('文档审核中，请等待审核结果')
     }
-
+    // 如果需要审核，则要创建一条审核记录
     if (this.reviewService.isRequireApproval()) {
       // 草稿或已发布：进入待审，不建索引；来自 Published 时 submitForReview 内会清旧索引
       if (doc.status === DocumentStatus.Draft || doc.status === DocumentStatus.Published) {

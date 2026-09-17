@@ -2,11 +2,21 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-15 16:19:17
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-16 09:03:02
+ * @LastEditTime: 2026-09-17 10:39:15
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/common/constants/permissions.ts
  */
 import { RoleCode } from './roles'
+
+/** 运行时校验用的权限编码 */
+export const PermissionCode = {
+  documentList: 'document:list',
+  documentCreate: 'document:create',
+  documentEdit: 'document:edit',
+  documentDelete: 'document:delete',
+  documentReview: 'document:review',
+  search: 'search',
+} as const
 
 /** 管理员自动拥有的操作权限 */
 export const ADMIN_OPERATION_PERMISSIONS = [

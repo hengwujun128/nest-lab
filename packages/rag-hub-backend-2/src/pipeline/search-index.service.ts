@@ -96,6 +96,121 @@ export class SearchIndexService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(`搜索索引已删除：documentId=${documentId}`)
   }
 
+  /**
+   * 关键词检索 kh_document。
+   * ES 不可用时返回空分页，不抛错。
+   */
+  async searchDocuments(params: {
+    keyword: string
+    page?: number
+    pageSize?: number
+    categoryId?: string
+    authorId?: string
+  }) {
+    const page = params.page ?? 1
+    const pageSize = Math.min(params.pageSize ?? 10, 50)
+    const from = (page - 1) * pageSize
+
+    if (!this.es) {
+      this.logger.warn('跳过搜索查询（ES 不可用）')
+      return { items: [], total: 0, page, pageSize }
+    }
+
+    const filters: Record<string, unknown>[] = []
+    if (params.categoryId) {
+      filters.push({ term: { categoryId: params.categoryId } })
+    }
+    if (params.authorId) {
+      filters.push({ term: { authorId: params.authorId } })
+    }
+
+    const keyword = params.keyword.trim()
+    // title^3 / summary^2：标题、摘要命中比正文权重大；filter 只筛不参与打分
+    const query =
+      filters.length > 0
+        ? {
+            bool: {
+              must: [
+                {
+                  multi_match: {
+                    query: keyword,
+                    fields: ['title^3', 'summary^2', 'content'],
+                    analyzer: 'ik_smart',
+                  },
+                },
+              ],
+              filter: filters,
+            },
+          }
+        : {
+            multi_match: {
+              query: keyword,
+              fields: ['title^3', 'summary^2', 'content'],
+              analyzer: 'ik_smart',
+            },
+          }
+
+    try {
+      const response = await this.es.search({
+        index: ES_INDEX,
+        from,
+        size: pageSize,
+        query,
+        // 列表不回传全文，仍用 content 做匹配与高亮
+        _source: {
+          excludes: ['content'],
+        },
+        // 命中片段打 <em>，给前端做摘要；正文最多 3 段、标题整段不高亮切片
+        highlight: {
+          fields: {
+            title: { number_of_fragments: 0 },
+            content: { fragment_size: 160, number_of_fragments: 3 },
+            summary: { fragment_size: 120, number_of_fragments: 1 },
+          },
+        },
+      })
+
+      const totalRaw = response.hits.total
+      const total = typeof totalRaw === 'number' ? totalRaw : (totalRaw?.value ?? 0)
+
+      const items = (response.hits.hits ?? []).map((hit) => {
+        const src = (hit._source ?? {}) as Record<string, unknown>
+        const highlight = hit.highlight ?? {}
+        const rawId = src.id
+        const id = typeof rawId === 'string' || typeof rawId === 'number' ? String(rawId) : (hit._id ?? '')
+        return {
+          id,
+          title: src.title ?? '',
+          summary: src.summary ?? null,
+          categoryId: src.categoryId ?? null,
+          tags: src.tags ?? null,
+          authorId: src.authorId ?? null,
+          status: src.status ?? null,
+          publishTime: src.publishTime ?? null,
+          score: hit._score ?? 0,
+          highlight: {
+            title: highlight.title ?? [],
+            summary: highlight.summary ?? [],
+            content: highlight.content ?? [],
+          },
+        }
+      })
+
+      return { items, total, page, pageSize }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`搜索查询失败：${message}`)
+      return { items: [], total: 0, page, pageSize }
+    }
+  }
+
+  /** 中文：写入细切（ik_max_word），检索粗切（ik_smart） */
+  private readonly ikText = {
+    type: 'text' as const,
+    analyzer: 'ik_max_word',
+    search_analyzer: 'ik_smart',
+  }
+
   /** 索引不存在则创建基础 mapping（text + keyword） */
   private async ensureEsIndex() {
     if (!this.es) return

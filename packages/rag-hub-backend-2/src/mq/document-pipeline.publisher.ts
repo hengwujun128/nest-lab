@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-02 16:30:56
+ * @LastEditTime: 2026-09-17 10:16:18
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/mq/document-pipeline.publisher.ts
  */
@@ -41,10 +41,11 @@ export class DocumentPipelinePublisher {
   /** 发布成功后调用：投递 RAG 分块向量化任务|全文检索索引
    * @param document Mongo 正文，用于 Search 消息附带 content 前缀快照
    */
-  async afterPublish(document: DocumentEntity, content?: string | null) {
+  async afterPublish(document: DocumentEntity) {
     await Promise.all([
       this.triggerRagReindex(document.id),
-      this.triggerSearchIndex(document, content),
+      // this.triggerSearchIndex(document, content),
+      this.triggerSearchIndex(document.id),
       this.triggerKgBuild(document.id),
     ])
   }
@@ -82,18 +83,17 @@ export class DocumentPipelinePublisher {
 
   /** 全文检索：按文档 ID 重建索引 */
   /**
-   * Search：消息内直接带文档快照，消费者无需再查库也能写索引。
-   * content 只截前 1000 字，控制消息体积。
+   * Search：只投递文档 ID，消费者需要再查库(Postgres + Mongo 拉全文再写 ES)才能写索引。
+   * 原因: 避免 MQ 消息体积过大,影响性能。
    */
-  private async triggerSearchIndex(document: DocumentEntity, content?: string | null) {
+  private async triggerSearchIndex(documentId: string) {
     const message: SearchIndexMessage = {
       taskId: randomUUID(),
       type: 'INDEX',
-      documentId: document.id,
-      document: this.buildSearchIndexData(document, content),
+      documentId: documentId,
     }
     const ok = await this.rabbit.publish(SEARCH_INDEX_EXCHANGE, SEARCH_RK_INDEX, message)
-    this.logger.log(`ES 搜索索引${ok ? '已投递' : '投递失败'}：documentId=${document.id}, taskId=${message.taskId}`)
+    this.logger.log(`ES 搜索索引${ok ? '已投递' : '投递失败'}：documentId=${documentId}, taskId=${message.taskId}`)
   }
 
   /** 全文检索：按文档 ID 删除索引 */

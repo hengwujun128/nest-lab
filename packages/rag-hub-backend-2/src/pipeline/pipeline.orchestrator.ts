@@ -54,6 +54,7 @@ export class PipelineOrchestrator {
       return
     }
 
+    // 加载文档
     const docs = await this.loadDocumentsByIds(documentIds)
     this.logger.log(`RAG 开始索引：type=${type}, total=${docs.length}`)
 
@@ -69,21 +70,26 @@ export class PipelineOrchestrator {
 
   /**
    * 处理 Search 索引消息。
-   * INDEX：消息内已带文档快照，直接写入 ES kh_document。
+   * INDEX：按 documentId 从 Postgres + Mongo 拉全文，写入 ES kh_document。
    * DELETE：按 documentId 删除。
    */
-  async handleSearchIndex(type: string, documentId: string, document?: Record<string, unknown>) {
+  async handleSearchIndex(type: string, documentId: string) {
     if (type === 'DELETE') {
       await this.searchIndexService.deleteDocument(documentId)
       return
     }
 
     if (type === 'INDEX') {
-      if (!document) {
-        this.logger.warn(`Search INDEX 消息缺少 document 快照：documentId=${documentId}`)
+      // 加载文档(Postgres + Mongo)
+      const docs = await this.loadDocumentsByIds([documentId])
+      const doc = docs[0]
+
+      if (!doc) {
+        this.logger.warn(`Search INDEX 文档不存在：documentId=${documentId}`)
         return
       }
-      await this.searchIndexService.indexDocument(document)
+      // 写入 ES kh_document
+      await this.searchIndexService.indexDocument(this.toSearchIndexDoc(doc))
       return
     }
 
@@ -186,6 +192,27 @@ export class PipelineOrchestrator {
       result.push(this.toPipelineDoc(doc, contentDoc?.content ?? ''))
     }
     return result
+  }
+
+  /** Postgres 元数据 + Mongo 全文 → ES kh_document 文档 */
+  private toSearchIndexDoc(doc: PipelineDocument): Record<string, unknown> {
+    return {
+      id: doc.id,
+      title: doc.title,
+      summary: doc.summary ?? null,
+      content: doc.content ?? '',
+      categoryId: doc.categoryId ?? null,
+      tags: doc.tags ?? null,
+      status: doc.status,
+      isPublic: doc.isPublic,
+      viewCount: doc.viewCount,
+      likeCount: doc.likeCount,
+      commentCount: doc.commentCount,
+      authorId: doc.authorId ?? null,
+      publishTime: this.toIsoDate(doc.publishTime),
+      createdAt: this.toIsoDate(doc.createdAt),
+      updatedAt: this.toIsoDate(doc.updatedAt),
+    }
   }
 
   /** Postgres 实体 + Mongo 正文 → 管线统一 DTO */
