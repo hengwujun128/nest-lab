@@ -123,32 +123,23 @@ export class SearchIndexService implements OnModuleInit, OnModuleDestroy {
     if (params.authorId) {
       filters.push({ term: { authorId: params.authorId } })
     }
-
     const keyword = params.keyword.trim()
     // title^3 / summary^2：标题、摘要命中比正文权重大；filter 只筛不参与打分
-    const query =
-      filters.length > 0
-        ? {
-            bool: {
-              must: [
-                {
-                  multi_match: {
-                    query: keyword,
-                    fields: ['title^3', 'summary^2', 'content'],
-                    analyzer: 'ik_smart',
-                  },
-                },
-              ],
-              filter: filters,
-            },
-          }
-        : {
+    const query = {
+      bool: {
+        must: [
+          {
             multi_match: {
               query: keyword,
               fields: ['title^3', 'summary^2', 'content'],
               analyzer: 'ik_smart',
             },
-          }
+          },
+        ],
+        // 未指定分类或作者时，空数组不添加过滤限制
+        filter: filters,
+      },
+    }
 
     try {
       const response = await this.es.search({
@@ -211,28 +202,38 @@ export class SearchIndexService implements OnModuleInit, OnModuleDestroy {
     search_analyzer: 'ik_smart',
   }
 
-  /** 索引不存在则创建基础 mapping（text + keyword） */
+  /** 索引不存在则创建;已有但未配 IK 则删掉重建（须重新发布文档) */
   private async ensureEsIndex() {
     if (!this.es) return
     const exists = await this.es.indices.exists({ index: ES_INDEX })
-    if (!exists) {
-      await this.es.indices.create({
-        index: ES_INDEX,
-        mappings: {
-          properties: {
-            id: { type: 'keyword' },
-            title: { type: 'text' },
-            summary: { type: 'text' },
-            content: { type: 'text' },
-            tags: { type: 'keyword' },
-            status: { type: 'integer' },
-            categoryId: { type: 'keyword' },
-            authorId: { type: 'keyword' },
-            publishTime: { type: 'date' },
-          },
-        },
-      })
-      this.logger.log(`已创建 ES 索引：${ES_INDEX}`)
+
+    //  已存在索引,读取 mapping,检查 title 是否使用 IK
+    if (exists) {
+      const mapping = await this.es.indices.getMapping({ index: ES_INDEX })
+      const title = mapping[ES_INDEX]?.mappings?.properties?.title as { analyzer?: string } | undefined
+      if (title?.analyzer === 'ik_max_word') {
+        return
+      }
+      this.logger.warn(`索引 ${ES_INDEX} 未使用 IK，将删除并重建（请重新发布文档）`)
+      await this.es.indices.delete({ index: ES_INDEX })
     }
+
+    await this.es.indices.create({
+      index: ES_INDEX,
+      mappings: {
+        properties: {
+          id: { type: 'keyword' },
+          title: this.ikText,
+          summary: this.ikText,
+          content: this.ikText,
+          tags: { type: 'keyword' },
+          status: { type: 'integer' },
+          categoryId: { type: 'keyword' },
+          authorId: { type: 'keyword' },
+          publishTime: { type: 'date' },
+        },
+      },
+    })
+    this.logger.log(`已创建 ES 索引：${ES_INDEX}`)
   }
 }
