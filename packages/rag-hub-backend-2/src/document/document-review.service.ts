@@ -11,6 +11,7 @@ import { DocumentEntity } from './entities/document.entity'
 import { DocumentReviewEntity, ReviewResult } from './entities/document-review.entity'
 import { DocumentContent, DocumentContentDocument } from './schemas/document-content.schema'
 import { QueryReviewTasksDto } from './dto/review.dto'
+import type { AuthUser } from '../auth/auth-user.interface'
 
 /**
  * 文档发布审核服务
@@ -40,7 +41,7 @@ export class DocumentReviewService {
    * 提交审核：Draft / Published → PendingReview
    * 若来自 Published，先清索引（审核期间不可检索）
    */
-  async submitForReview(documentId: string): Promise<DocumentEntity> {
+  async submitForReview(documentId: string, actor?: AuthUser): Promise<DocumentEntity> {
     const doc = await this.findDocumentOrThrow(documentId)
 
     if (!canSubmitReview(doc.status)) {
@@ -68,6 +69,7 @@ export class DocumentReviewService {
 
     // 为文档新增一条待审记录后，并同步更新文档状态并保存
     doc.status = DocumentStatus.PendingReview
+    if (actor?.userId) doc.updateBy = actor.userId
     const saved = await this.em.save(doc)
 
     // NOTE: 如果文档之前是已发布状态，则清理索引

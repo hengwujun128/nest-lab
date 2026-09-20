@@ -298,7 +298,7 @@ export class DocumentService {
    * KG：分块 → 抽实体关系 → Neo4j
    */
 
-  async publish(id: string) {
+  async publish(id: string, actor: AuthUser) {
     this.logger.log(`发布文档：documentId=${id}`)
     // NOTE:主要是通过查询元数据来判断文档是否可以发布
     const doc = await this.em.findOne(DocumentEntity, {
@@ -320,21 +320,21 @@ export class DocumentService {
       // 草稿或已发布：进入待审，不建索引；来自 Published 时 submitForReview 内会清旧索引
       if (doc.status === DocumentStatus.Draft || doc.status === DocumentStatus.Published) {
         // 为文档创建一条待审记录并保存
-        const saved = await this.reviewService.submitForReview(id)
+        const saved = await this.reviewService.submitForReview(id, actor)
         // 从mongoDB中获取文档内容, 并返回
         const content = await this.loadContent(saved.contentId)
         return { ...saved, content }
       }
     }
 
-    return this.directPublish(id)
+    return this.directPublish(id, actor)
   }
 
   /**
    * 免审直接发布
    * 也供 DocumentReviewService.approveReview 间接使用（审核通过后 status→Published）
    */
-  async directPublish(id: string) {
+  async directPublish(id: string, actor?: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -353,6 +353,7 @@ export class DocumentService {
 
     doc.status = DocumentStatus.Published
     doc.publishTime = new Date()
+    if (actor?.userId) doc.updateBy = actor.userId
     const saved = await this.em.save(doc)
 
     const content = await this.loadContent(saved.contentId)
@@ -363,7 +364,7 @@ export class DocumentService {
   }
 
   /** 归档：Published → Archived，清索引 */
-  async archive(id: string) {
+  async archive(id: string, actor?: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -375,6 +376,7 @@ export class DocumentService {
     }
 
     doc.status = DocumentStatus.Archived
+    if (actor?.userId) doc.updateBy = actor.userId
     const saved = await this.em.save(doc)
     await this.safeUnpublish(id)
 
@@ -383,7 +385,7 @@ export class DocumentService {
   }
 
   /** 已发布 → 草稿（保存草稿），清索引 */
-  async saveAsDraft(id: string) {
+  async saveAsDraft(id: string, actor?: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -395,6 +397,7 @@ export class DocumentService {
     }
 
     doc.status = DocumentStatus.Draft
+    if (actor?.userId) doc.updateBy = actor.userId
     const saved = await this.em.save(doc)
     await this.safeUnpublish(id)
 
@@ -407,7 +410,7 @@ export class DocumentService {
    * Postgres、Mongo 两侧都将 deleted 置为 true（不物理删正文）
    * 并异步清理 ES 搜索索引与向量快
    */
-  async remove(id: string) {
+  async remove(id: string, actor?: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -416,6 +419,7 @@ export class DocumentService {
     }
 
     doc.deleted = true
+    if (actor?.userId) doc.updateBy = actor.userId
     await this.em.save(doc)
     await this.contentModel.updateOne({ _id: doc.contentId }, { $set: { deleted: true } })
 
