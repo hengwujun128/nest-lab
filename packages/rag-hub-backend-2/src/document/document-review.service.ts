@@ -106,8 +106,7 @@ export class DocumentReviewService {
     const saved = await this.em.save(doc)
 
     // 3. 重建索引(先从mongoDB中获取文档内容,在进行消息投递)
-    const content = await this.loadContent(doc.contentId)
-    await this.safePublish(saved, content)
+    await this.safePublish(saved)
 
     this.logger.log(`审核通过：reviewId=${reviewId}, documentId=${doc.id}`)
     return saved
@@ -223,9 +222,9 @@ export class DocumentReviewService {
     return contentDoc?.content ?? ''
   }
 
-  private async safePublish(doc: DocumentEntity, content: string) {
+  private async safePublish(doc: DocumentEntity) {
     try {
-      await this.pipelinePublisher.afterPublish(doc, content)
+      await this.pipelinePublisher.afterPublish(doc)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.logger.warn(`审核通过后索引投递失败：documentId=${doc.id}, ${message}`)

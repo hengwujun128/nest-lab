@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-16 15:52:39
+ * @LastEditTime: 2026-09-21 16:53:08
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -34,6 +34,9 @@ import { RedisModule } from './redis/redis.module'
 import { MailerModule } from '@nestjs-modules/mailer'
 /* ----------------------------------- v9 ----------------------------------- */
 import { TeamModule } from './team/team.module'
+/* ----------------------------------- V10 ---------------------------------- */
+import { SearchModule } from './search/search.module'
+import { GraphModule } from './graph/graph.module'
 
 @Module({
   imports: [
@@ -98,6 +101,8 @@ import { TeamModule } from './team/team.module'
     DocumentModule,
     AuthModule,
     TeamModule,
+    SearchModule,
+    GraphModule,
   ],
   controllers: [AppController],
   providers: [AppService],

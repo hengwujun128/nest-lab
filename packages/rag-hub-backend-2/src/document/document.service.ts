@@ -104,7 +104,7 @@ export class DocumentService {
       // 仅 Published 才建索引。需审时创建即 Published 已在上方拒绝，
       // 能走到这里的 Published 一定是免审；草稿不投 MQ。
       if (status === DocumentStatus.Published) {
-        await this.safePublish(saved, dto.content)
+        await this.safePublish(saved)
       }
 
       return { ...saved, content: dto.content }
@@ -357,7 +357,7 @@ export class DocumentService {
     const saved = await this.em.save(doc)
 
     const content = await this.loadContent(saved.contentId)
-    await this.safePublish(saved, content)
+    await this.safePublish(saved)
 
     this.logger.log(`文档发布成功：documentId=${id}`)
     return { ...saved, content }
@@ -543,7 +543,7 @@ export class DocumentService {
 
     if (isPublished && contentChanged) {
       if (!this.reviewService.isRequireApproval()) {
-        await this.safePublish(doc, content)
+        await this.safePublish(doc)
       }
     }
   }
@@ -555,9 +555,9 @@ export class DocumentService {
   }
 
   /** 投递 MQ：RAG 分块向量 + 全文搜索 + KG 建图（失败不回滚文档状态） */
-  private async safePublish(doc: DocumentEntity, content: string) {
+  private async safePublish(doc: DocumentEntity) {
     try {
-      await this.pipelinePublisher.afterPublish(doc, content)
+      await this.pipelinePublisher.afterPublish(doc)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.logger.warn(`索引投递失败（不影响文档状态）：documentId=${doc.id}, ${message}`)
