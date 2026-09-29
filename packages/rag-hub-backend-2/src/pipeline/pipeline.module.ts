@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-07 11:32:43
+ * @LastEditTime: 2026-09-26 11:26:28
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/pipeline/pipeline.module.ts
  */
@@ -29,6 +29,6 @@ import { GraphBuildService } from './graph-build.service'
     ExtractionService,
     GraphBuildService,
   ],
-  exports: [PipelineOrchestrator, VectorIndexService, SearchIndexService, GraphBuildService],
+  exports: [PipelineOrchestrator, VectorIndexService, SearchIndexService, GraphBuildService, EmbeddingService],
 })
 export class PipelineModule {}

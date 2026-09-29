@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-08-25 13:54:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-03 10:03:41
+ * @LastEditTime: 2026-09-23 10:44:51
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/pipeline/types/pipeline.types.ts
  */
@@ -36,6 +36,19 @@ export interface DocumentChunk {
   publishTime?: string | null
   /** 向量；分块阶段为空，EmbeddingService 填充后写入 ES dense_vector */
   embedding?: number[]
+}
+
+/** kh_chunk 检索命中（关键词 / 向量 / RRF 融合后共用） */
+export interface ChunkHit {
+  chunkId: string
+  documentId: string
+  documentTitle: string
+  content: string
+  heading: string | null
+  /** 当前阶段得分：原始检索分、RRF 分或 rerank 分 */
+  score: number
+  bm25Score?: number
+  vectorScore?: number
 }
 
 /** 图谱实体（如「张三」「入职流程」「知识库」） */

@@ -1,7 +1,7 @@
 import { Client } from '@elastic/elasticsearch'
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { DocumentChunk } from './types/pipeline.types'
+import { ChunkHit, DocumentChunk } from './types/pipeline.types'
 
 /** RAG 分块向量索引名 */
 const CHUNK_INDEX = 'kh_chunk'
@@ -111,6 +111,172 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * BM25 关键词检索（content + document_title，ik_smart）。
+   * ES 不可用时返回 []。
+   */
+  async keywordSearch(query: string, topK = 20): Promise<ChunkHit[]> {
+    if (!this.es) {
+      this.logger.warn('跳过关键词检索（ES 不可用）')
+      return []
+    }
+    const trimmed = query.trim()
+    if (!trimmed) return []
+
+    const k = this.clampTopK(topK)
+    try {
+      const response = await this.es.search({
+        index: CHUNK_INDEX, // 从这个索引中查询
+        size: k, // 返回的结果数量
+        query: {
+          // 查询条件：多字段匹配
+          multi_match: {
+            query: trimmed, // 查询词
+            fields: ['document_title^2', 'content'], // 字段权重
+            analyzer: 'ik_smart', // 分词器
+          },
+        },
+        // 返回的字段：这些字段会被返回
+        _source: ['chunk_id', 'document_id', 'document_title', 'content', 'heading'],
+      })
+      return this.mapHits(response.hits.hits)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`关键词检索失败：${message}`)
+      return []
+    }
+  }
+
+  /**
+   * kNN 检索知识块（cosine）。
+   * ES 不可用或索引为空时返回 []。
+   */
+  async knnSearch(queryVector: number[], topK = 20): Promise<ChunkHit[]> {
+    if (!this.es) {
+      this.logger.warn('跳过向量检索（ES 不可用）')
+      return []
+    }
+    if (!queryVector.length) return []
+
+    const k = this.clampTopK(topK)
+    try {
+      const response = await this.es.search({
+        index: CHUNK_INDEX, // 从这个索引中查询
+        size: k, // 返回的结果数量
+        // NOTE: knn 检索的参数
+        knn: {
+          field: 'embedding', // 使用 embedding 字段
+          query_vector: queryVector, // 查询向量
+          k, // 返回的结果数量
+          num_candidates: Math.max(k * 10, 50), // 候选数量
+        },
+        // 返回的字段：这些字段会被返回
+        _source: ['chunk_id', 'document_id', 'document_title', 'content', 'heading'],
+      })
+      return this.mapHits(response.hits.hits)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`向量检索失败：${message}`)
+      return []
+    }
+  }
+
+  /**
+   * 混合检索粗排：关键词 + 向量并行召回，再按 chunkId 做 RRF 融合。
+   * 嵌入失败或未传入时只走关键词。
+   */
+  async searchHybrid(params: {
+    query: string
+    queryVector?: number[] | null
+    hybridTopK?: number
+    rrfC?: number
+  }): Promise<ChunkHit[]> {
+    // 设置混合检索的 topK
+    const hybridTopK = this.clampTopK(params.hybridTopK ?? 20)
+    // 设置 RRF 的 C 值
+    const rrfC = params.rrfC && params.rrfC > 0 ? params.rrfC : 60
+
+    // 关键词的检索结果,向量检索的结果
+    const [keywordHits, vectorHits] = await Promise.all([
+      // 关键词检索
+      this.keywordSearch(params.query, hybridTopK),
+      // 向量检索
+      params.queryVector?.length ? this.knnSearch(params.queryVector, hybridTopK) : Promise.resolve([] as ChunkHit[]),
+    ])
+
+    // TIPS: 融合关键词和向量检索结果,使用 RRF 融合算法进行融合
+    const fused = this.rrfFuse(keywordHits, vectorHits, rrfC)
+    this.logger.log(`混合检索 RRF：keyword=${keywordHits.length}, vector=${vectorHits.length}, fused=${fused.length}`)
+    // 返回融合后的结果
+    return fused
+  }
+
+  private clampTopK(topK: number): number {
+    return Math.min(Math.max(topK, 1), 50)
+  }
+
+  private mapHits(
+    hits: Array<{
+      _id?: string
+      _score?: number | null
+      _source?: unknown
+    }>,
+  ): ChunkHit[] {
+    return hits.map((hit) => {
+      const src = (hit._source ?? {}) as Record<string, unknown>
+      return {
+        chunkId: String(src.chunk_id ?? hit._id),
+        documentId: String(src.document_id ?? ''),
+        documentTitle: String(src.document_title ?? ''),
+        content: String(src.content ?? ''),
+        heading: (src.heading as string | null) ?? null,
+        score: hit._score ?? 0,
+      }
+    })
+  }
+
+  /**
+   * Reciprocal Rank Fusion：score(d) = Σ 1 / (C + rank_r(d))
+   * 两路各自按原始得分排序后再算排名。
+   */
+  private rrfFuse(keywordHits: ChunkHit[], vectorHits: ChunkHit[], rrfC: number): ChunkHit[] {
+    const fused = new Map<string, ChunkHit>()
+
+    const addChannel = (hits: ChunkHit[], channel: 'keyword' | 'vector') => {
+      // TIPS: 对结果进行排序，按照得分从高到低排序
+      const sorted = [...hits].sort((a, b) => b.score - a.score)
+      // TIPS: 遍历排序后的结果
+      sorted.forEach((hit, rank) => {
+        // TIPS: 计算 RRF 得分(d) = Σ 1 / (C + rank_r(d))
+        const rrf = 1 / (rrfC + rank + 1)
+        // TIPS: 获取已有的结果
+        const existing = fused.get(hit.chunkId)
+        // TIPS: 如果已有的结果不存在，则添加新的结果
+        if (!existing) {
+          // TIPS: 添加新的结果
+          fused.set(hit.chunkId, {
+            ...hit,
+            score: rrf,
+            bm25Score: channel === 'keyword' ? hit.score : 0,
+            vectorScore: channel === 'vector' ? hit.score : 0,
+          })
+          return
+        }
+        // TIPS: 如果已有的结果存在，则更新得分
+        existing.score += rrf
+        // TIPS: 如果关键词的得分，则更新关键词得分
+        if (channel === 'keyword') existing.bm25Score = hit.score
+        // TIPS: 如果向量检索的得分，则更新向量检索得分
+        if (channel === 'vector') existing.vectorScore = hit.score
+      })
+    }
+
+    addChannel(keywordHits, 'keyword')
+    addChannel(vectorHits, 'vector')
+
+    return [...fused.values()].sort((a, b) => b.score - a.score)
+  }
+
+  /**
    * 创建 kh_chunk 索引（含 dense_vector）。
    * document_id 用 keyword：雪花 ID 以字符串传递，避免 JS long 精度问题。
    */
@@ -135,8 +301,16 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
             document_title: {
               type: 'text',
               fields: { keyword: { type: 'keyword' } },
+              // 分词器
+              analyzer: 'ik_max_word',
+              search_analyzer: 'ik_smart',
             },
-            content: { type: 'text' },
+            content: {
+              type: 'text',
+              // 分词器
+              analyzer: 'ik_max_word',
+              search_analyzer: 'ik_smart',
+            },
             heading: { type: 'keyword' },
             chunk_index: { type: 'integer' },
             total_chunks: { type: 'integer' },

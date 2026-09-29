@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-21 16:53:08
+ * @LastEditTime: 2026-09-26 11:21:47
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -37,6 +37,7 @@ import { TeamModule } from './team/team.module'
 /* ----------------------------------- V10 ---------------------------------- */
 import { SearchModule } from './search/search.module'
 import { GraphModule } from './graph/graph.module'
+import { AiModule } from './ai/ai.module'
 
 @Module({
   imports: [
@@ -103,6 +104,7 @@ import { GraphModule } from './graph/graph.module'
     TeamModule,
     SearchModule,
     GraphModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
