@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-21 16:44:36
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-26 11:21:47
+ * @LastEditTime: 2026-10-13 16:00:17
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/app.module.ts
  */
@@ -38,6 +38,9 @@ import { TeamModule } from './team/team.module'
 import { SearchModule } from './search/search.module'
 import { GraphModule } from './graph/graph.module'
 import { AiModule } from './ai/ai.module'
+/* ----------------------------------- V13 ---------------------------------- */
+import { AiSessionEntity } from './ai/entities/ai-session.entity'
+import { AiMessageEntity } from './ai/entities/ai-message.entity'
 
 @Module({
   imports: [
@@ -86,6 +89,8 @@ import { AiModule } from './ai/ai.module'
           UserPermissionEntity,
           TeamEntity,
           TeamMemberEntity,
+          AiSessionEntity,
+          AiMessageEntity,
         ],
         synchronize: false, // 继续关着，别靠 sync 建表
       }),

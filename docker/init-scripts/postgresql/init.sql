@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-07-22 15:25:00
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-20 17:14:40
+ * @LastEditTime: 2026-10-10 17:03:00
  * @Description: 
  * @FilePath: /nest-lab/docker/init-scripts/postgresql/init.sql
  */
@@ -227,3 +227,32 @@ INSERT INTO kh_team_member (id, team_id, user_id, member_role) VALUES
     (9000000000000000003, 8000000000000000002, 1000000000000000003, 'member')
 ON CONFLICT (id) DO NOTHING;
 
+
+-- ==================== AI 会话 ====================
+
+CREATE TABLE IF NOT EXISTS kh_ai_session (
+    id BIGINT PRIMARY KEY,                          -- 会话 ID（雪花）
+    user_id BIGINT NOT NULL REFERENCES kh_user(id), -- 用户 ID
+    title VARCHAR(80) NOT NULL,                    -- 会话标题
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    -- deleted BOOLEAN NOT NULL DEFAULT false          -- 软删除标记
+);
+
+
+-- 索引：按用户 ID 和更新时间排序
+CREATE INDEX IF NOT EXISTS idx_kh_ai_session_user_updated
+    ON kh_ai_session(user_id, updated_at DESC); 
+
+CREATE TABLE IF NOT EXISTS kh_ai_message (
+    id BIGINT PRIMARY KEY,                          -- 消息 ID（雪花）
+    session_id BIGINT NOT NULL REFERENCES kh_ai_session(id) ON DELETE CASCADE,
+    role VARCHAR(16) NOT NULL,                      -- 角色：user / assistant
+    content TEXT NOT NULL,                           -- 消息内容
+    sources JSONB,                                  -- 来源
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),     -- 创建时间
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()      -- 更新时间
+);
+-- 索引：按会话 ID 和创建时间排序
+CREATE INDEX IF NOT EXISTS idx_kh_ai_message_session_id
+    ON kh_ai_message(session_id, created_at);
