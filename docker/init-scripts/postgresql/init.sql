@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS kh_ai_session (
     user_id BIGINT NOT NULL REFERENCES kh_user(id), -- 用户 ID
     title VARCHAR(80) NOT NULL,                    -- 会话标题
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
     -- deleted BOOLEAN NOT NULL DEFAULT false          -- 软删除标记
 );
 
