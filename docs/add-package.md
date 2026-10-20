@@ -32,6 +32,23 @@ pnpm dlx @nestjs/cli new packages/my-new-app --package-manager pnpm --skip-git
 
 然后改 `name`、接 `catalog:`、验证 `start:dev`。
 
+## 安装依赖并写入 catalog
+
+在**包目录**里安装，并让版本登记到根目录 `pnpm-workspace.yaml` 的 `catalog:`，本包 `package.json` 写成 `"catalog:"`：
+
+```bash
+pnpm add <pkg> --save-catalog          # 运行时依赖
+pnpm add -D <pkg> --save-catalog       # 开发依赖
+```
+
+在仓库根目录执行时必须指定包，否则依赖会写进根 `package.json`，不会共享：
+
+```bash
+pnpm --filter <name> add <pkg> --save-catalog
+```
+
+catalog 里已经有这个包时，同一条命令会复用已有版本，不会再写一条。
+
 ## 目录结构约定
 
 ```text

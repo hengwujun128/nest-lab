@@ -40,6 +40,16 @@ export class ChatSessionService {
     return this.em.save(session)
   }
 
+  /** 已有会话：标题仍是默认名时用首问覆盖，并刷新更新时间 */
+  async touchTitle(userId: string, sessionId: string, question: string) {
+    const session = await this.getOwned(userId, sessionId)
+    if (session.title === DEFAULT_TITLE) {
+      session.title = titleFromQuestion(question)
+    }
+    session.updatedAt = new Date()
+    return this.em.save(session)
+  }
+
   async rename(userId: string, id: string, dto: UpdateSessionDto) {
     const session = await this.getOwned(userId, id)
     session.title = dto.title.trim().slice(0, 80)

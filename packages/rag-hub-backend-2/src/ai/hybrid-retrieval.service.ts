@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-23 10:15:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-23 16:55:57
+ * @LastEditTime: 2026-10-14 16:51:02
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/hybrid-retrieval.service.ts
  */
@@ -22,6 +22,8 @@ export class HybridRetrievalService {
   private readonly logger = new Logger(HybridRetrievalService.name)
   private readonly hybridTopK: number
   private readonly rrfC: number
+  /** rerank relevance_score 下限（0–1）。 */
+  private readonly minScore: number
 
   constructor(
     config: ConfigService,
@@ -31,6 +33,7 @@ export class HybridRetrievalService {
   ) {
     this.hybridTopK = Number(config.get('RAG_HYBRID_TOP_K', 20))
     this.rrfC = Number(config.get('RAG_RRF_C', 60))
+    this.minScore = Number(config.get('RAG_MIN_SCORE', 0.4))
   }
 
   async retrieve(query: string, topK = 5): Promise<ChunkHit[]> {
@@ -50,10 +53,15 @@ export class HybridRetrievalService {
     }
 
     // 重排序
-    const reranked = await this.reranker.rerank(query, fused, topK)
+    const reranked = await this.reranker.rerank(query, fused, fused.length)
     if (reranked?.length) {
-      // TIPS: 返回重排序后的结果
-      return reranked.slice(0, topK)
+      const kept = this.minScore > 0 ? reranked.filter((hit) => hit.score >= this.minScore) : reranked
+      const top = kept.slice(0, topK)
+      this.logger.log(
+        `检索过滤：rerank=${reranked.length}, minScore=${this.minScore}, ` +
+          `best=${reranked[0]?.score?.toFixed(3) ?? '-'}, kept=${kept.length}, return=${top.length}`,
+      )
+      return top
     }
 
     return fused.slice(0, topK)

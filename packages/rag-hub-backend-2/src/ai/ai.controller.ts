@@ -2,16 +2,19 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-23 10:15:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-10-14 10:28:38
+ * @LastEditTime: 2026-10-14 15:28:37
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/ai.controller.ts
  */
-import { Body, Controller, Post, Get, Query, Param, Patch, Delete } from '@nestjs/common'
+import { Body, Controller, Post, Get, Query, Param, Patch, Delete, Res } from '@nestjs/common'
+import type { Response } from 'express'
 import { AiChatService } from './ai-chat.service'
 import { HybridRetrievalService } from './hybrid-retrieval.service'
 import { ChatSessionService } from './chat-session.service'
 
 import { ChatDto } from './dto/chat.dto'
+import { ChatStreamDto } from './dto/chat-stream.dto'
+
 import { RagSearchDto } from './dto/rag-search.dto'
 import { CreateSessionDto, QuerySessionDto, UpdateSessionDto } from './dto/session.dto'
 
@@ -19,6 +22,7 @@ import { RequirePermission } from '../auth/decorators/require-permission.decorat
 import { PermissionCode } from '../common/constants/permissions'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
 import type { AuthUser } from '../auth/auth-user.interface'
+import { AiStreamService } from './ai-stream.service'
 
 @Controller()
 export class AiController {
@@ -26,6 +30,7 @@ export class AiController {
     private readonly aiChat: AiChatService,
     private readonly retrieval: HybridRetrievalService,
     private readonly sessions: ChatSessionService,
+    private readonly aiStream: AiStreamService,
   ) {}
 
   /**
@@ -43,6 +48,17 @@ export class AiController {
   @RequirePermission(PermissionCode.search)
   chat(@Body() dto: ChatDto, @CurrentUser() user: AuthUser) {
     return this.aiChat.chat(dto.content, dto.topK ?? 5, user, dto.sessionId)
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                    流式对话                                 */
+  /* -------------------------------------------------------------------------- */
+
+  /** LangChain Agent 流式作答，经 @ai-sdk/langchain 转成 UI Message Stream */
+  @Post('ai/chat/stream')
+  @RequirePermission(PermissionCode.search)
+  streamChat(@Body() dto: ChatStreamDto, @CurrentUser() user: AuthUser, @Res() res: Response) {
+    return this.aiStream.streamChat(dto, user, res)
   }
 
   /* -------------------------------------------------------------------------- */
