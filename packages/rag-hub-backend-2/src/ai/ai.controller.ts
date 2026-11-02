@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-23 10:15:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-10-14 15:28:37
+ * @LastEditTime: 2026-10-23 13:46:25
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/ai.controller.ts
  */
@@ -21,8 +21,9 @@ import { CreateSessionDto, QuerySessionDto, UpdateSessionDto } from './dto/sessi
 import { RequirePermission } from '../auth/decorators/require-permission.decorator'
 import { PermissionCode } from '../common/constants/permissions'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
-import type { AuthUser } from '../auth/auth-user.interface'
 import { AiStreamService } from './ai-stream.service'
+
+import type { AuthUser } from '../auth/auth-user.interface'
 
 @Controller()
 export class AiController {
@@ -39,8 +40,8 @@ export class AiController {
    */
   @Post('rag/search')
   @RequirePermission(PermissionCode.search)
-  search(@Body() dto: RagSearchDto) {
-    return this.retrieval.retrieve(dto.query.trim(), dto.topK ?? 5)
+  search(@Body() dto: RagSearchDto, @CurrentUser() user: AuthUser) {
+    return this.retrieval.retrieve(dto.query.trim(), dto.topK ?? 5, user)
   }
 
   /** RAG 对话：混合检索后再作答 */

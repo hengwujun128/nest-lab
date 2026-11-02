@@ -71,8 +71,8 @@ export class AiChatService {
       return { sessionId: sessionId ?? null, answer: '请输入问题。', sources: [] as ChatSource[] }
     }
 
-    // 检索相关资料
-    const hits = await this.retrieval.retrieve(trimmed, topK)
+    // 检索相关资料, 带上用户信息
+    const hits = await this.retrieval.retrieve(trimmed, topK, user)
     if (!hits.length) {
       // 如果检索到的资料为空, 则返回空答案和空来源
       const empty = {

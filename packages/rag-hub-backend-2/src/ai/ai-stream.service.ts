@@ -149,7 +149,8 @@ export class AiStreamService {
 
         let hits: ChunkHit[] = []
         try {
-          hits = await this.retrieval.retrieve(question, topK)
+          // 知识库检索，带上用户信息
+          hits = await this.retrieval.retrieve(question, topK, user)
           // 检索成功，写 data-retrieve
         } catch (error) {
           const detail = error instanceof Error ? error.message : String(error)

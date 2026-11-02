@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-23 10:15:51
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-10-14 16:51:02
+ * @LastEditTime: 2026-10-23 14:20:35
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/hybrid-retrieval.service.ts
  */
@@ -12,6 +12,10 @@ import { EmbeddingService } from '../pipeline/embedding.service'
 import { VectorIndexService } from '../pipeline/vector-index.service'
 import { ChunkHit } from '../pipeline/types/pipeline.types'
 import { RerankerService } from './reranker.service'
+
+import { accessFromUser } from '../document/document-access'
+
+import type { AuthUser } from '../auth/auth-user.interface'
 
 /**
  * kh_chunk 混合检索：
@@ -36,15 +40,19 @@ export class HybridRetrievalService {
     this.minScore = Number(config.get('RAG_MIN_SCORE', 0.4))
   }
 
-  async retrieve(query: string, topK = 5): Promise<ChunkHit[]> {
+  async retrieve(query: string, topK = 5, user: AuthUser): Promise<ChunkHit[]> {
     // 先向量化用户的 query
     const queryVector = await this.embedQuery(query)
+    // 把用户信息转成一个scope对象，用于后续的检索过滤
+    const scope = user ? accessFromUser(user) : { unrestricted: false, userId: '', teamIds: [] }
+
     // 再进行混合检索(向量召回 + 关键词召回 → RRF 粗融合 → reranker 精排)
     const fused = await this.vectorIndex.searchHybrid({
       query,
       queryVector,
       hybridTopK: this.hybridTopK,
       rrfC: this.rrfC,
+      scope,
     })
 
     if (!fused.length) {

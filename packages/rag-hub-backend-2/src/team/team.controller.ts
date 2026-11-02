@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-15 16:19:17
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-16 17:14:26
+ * @LastEditTime: 2026-10-29 15:04:27
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/team/team.controller.ts
  */
@@ -12,6 +12,9 @@ import { CreateTeamDto, QueryTeamDto, UpdateTeamDto } from './dto/team.dto'
 import { RequirePermission } from '../auth/decorators/require-permission.decorator'
 import { Roles } from '../auth/decorators/roles.decorator'
 import { RoleCode } from '../common/constants/roles'
+
+import { CurrentUser } from '../auth/decorators/current-user.decorator'
+import type { AuthUser } from '../auth/auth-user.interface'
 
 @Controller('teams')
 @Roles(RoleCode.ADMIN)
@@ -41,6 +44,12 @@ export class TeamController {
   @RequirePermission('system:team')
   page(@Query() query: QueryTeamDto) {
     return this.teamService.page(query)
+  }
+
+  /** 当前用户所在团队（含担任负责人的），登录即可 */
+  @Get('mine')
+  listMine(@CurrentUser() user: AuthUser) {
+    return this.teamService.listMine(user.userId)
   }
 
   @Get('tree')

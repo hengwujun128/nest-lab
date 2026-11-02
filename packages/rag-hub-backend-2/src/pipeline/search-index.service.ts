@@ -2,6 +2,8 @@ import { Client } from '@elastic/elasticsearch'
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+import { ES_DOC_VISIBILITY_FIELDS, esVisibilityFilter, type DocumentAccessScope } from '../document/document-access'
+
 /** ES 文档级全文检索索引名 */
 const ES_INDEX = 'kh_document'
 
@@ -73,6 +75,33 @@ export class SearchIndexService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(`搜索索引已写入 ES：documentId=${id}`)
   }
 
+  /** 已发布文档只改公开/团队时，补写可见性字段，不必整篇重索引 */
+  async updateVisibility(
+    documentId: string,
+    vis: { isPublic: boolean; teamId: string | null; authorId: string | null },
+  ) {
+    if (!this.es) {
+      this.logger.warn(`跳过搜索可见性更新（ES 不可用）：documentId=${documentId}`)
+      return
+    }
+    try {
+      await this.es.update({
+        index: ES_INDEX,
+        id: documentId,
+        doc: {
+          isPublic: vis.isPublic,
+          teamId: vis.teamId,
+          authorId: vis.authorId,
+        },
+        refresh: true,
+      })
+      this.logger.log(`搜索索引可见性已更新：documentId=${documentId}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`搜索索引可见性更新失败：documentId=${documentId}, ${message}`)
+    }
+  }
+
   /** 下架 / 删除时从 ES 移除 */
   async deleteDocument(documentId: string) {
     if (!this.es) {
@@ -106,6 +135,7 @@ export class SearchIndexService implements OnModuleInit, OnModuleDestroy {
     pageSize?: number
     categoryId?: string
     authorId?: string
+    scope: DocumentAccessScope
   }) {
     const page = params.page ?? 1
     const pageSize = Math.min(params.pageSize ?? 10, 50)
@@ -117,6 +147,11 @@ export class SearchIndexService implements OnModuleInit, OnModuleDestroy {
     }
 
     const filters: Record<string, unknown>[] = []
+
+    // 可见性过滤
+    const vis = params.scope ? esVisibilityFilter(params.scope, ES_DOC_VISIBILITY_FIELDS) : null
+    if (vis) filters.push(vis)
+
     if (params.categoryId) {
       filters.push({ term: { categoryId: params.categoryId } })
     }
@@ -231,6 +266,10 @@ export class SearchIndexService implements OnModuleInit, OnModuleDestroy {
           categoryId: { type: 'keyword' },
           authorId: { type: 'keyword' },
           publishTime: { type: 'date' },
+
+          // 加上 teamId 和 isPublic 字段, 用于可见性过滤
+          teamId: { type: 'keyword' },
+          isPublic: { type: 'boolean' },
         },
       },
     })

@@ -1,8 +1,16 @@
 import { Client } from '@elastic/elasticsearch'
+import type { estypes } from '@elastic/elasticsearch'
+
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ChunkHit, DocumentChunk } from './types/pipeline.types'
 
+import {
+  ES_CHUNK_VISIBILITY_FIELDS,
+  esVisibilityFilter,
+  wrapEsQuery,
+  type DocumentAccessScope,
+} from '../document/document-access'
 /** RAG 分块向量索引名 */
 const CHUNK_INDEX = 'kh_chunk'
 
@@ -50,6 +58,37 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.es?.close()
+  }
+
+  /** 已发布文档只改公开/团队时，批量改 chunk 可见性，不必重算向量 */
+  async updateVisibility(
+    documentId: string,
+    vis: { isPublic: boolean; teamId: string | null; authorId: string | null },
+  ) {
+    if (!this.es) {
+      this.logger.warn(`跳过向量可见性更新（ES 不可用）：documentId=${documentId}`)
+      return
+    }
+    try {
+      const result = await this.es.updateByQuery({
+        index: CHUNK_INDEX,
+        refresh: true,
+        query: { term: { document_id: documentId } },
+        script: {
+          source:
+            'ctx._source.is_public = params.is_public; ctx._source.team_id = params.team_id; ctx._source.author_id = params.author_id;',
+          params: {
+            is_public: vis.isPublic,
+            team_id: vis.teamId,
+            author_id: vis.authorId,
+          },
+        },
+      })
+      this.logger.log(`向量块可见性已更新：documentId=${documentId}, updated=${result.updated ?? 0}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`向量块可见性更新失败：documentId=${documentId}, ${message}`)
+    }
   }
 
   /** 删除某文档全部向量块（发布重建 / 下架时调用）。 */
@@ -114,7 +153,7 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
    * BM25 关键词检索（content + document_title，ik_smart）。
    * ES 不可用时返回 []。
    */
-  async keywordSearch(query: string, topK = 20): Promise<ChunkHit[]> {
+  async keywordSearch(query: string, topK = 20, scope?: DocumentAccessScope): Promise<ChunkHit[]> {
     if (!this.es) {
       this.logger.warn('跳过关键词检索（ES 不可用）')
       return []
@@ -123,18 +162,25 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
     if (!trimmed) return []
 
     const k = this.clampTopK(topK)
+    // 把 scope 拼成 ES 的过滤条件
+    const vis = scope ? esVisibilityFilter(scope, ES_CHUNK_VISIBILITY_FIELDS) : null
     try {
       const response = await this.es.search({
         index: CHUNK_INDEX, // 从这个索引中查询
         size: k, // 返回的结果数量
-        query: {
-          // 查询条件：多字段匹配
-          multi_match: {
-            query: trimmed, // 查询词
-            fields: ['document_title^2', 'content'], // 字段权重
-            analyzer: 'ik_smart', // 分词器
+        // 把 scope 拼成 ES 的过滤条件
+        query: wrapEsQuery(
+          {
+            // 查询条件：多字段匹配
+            multi_match: {
+              query: trimmed, // 查询词
+              fields: ['document_title^2', 'content'], // 字段权重
+              analyzer: 'ik_smart', // 分词器
+            },
           },
-        },
+          vis,
+        ),
+
         // 返回的字段：这些字段会被返回
         _source: ['chunk_id', 'document_id', 'document_title', 'content', 'heading'],
       })
@@ -150,7 +196,7 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
    * kNN 检索知识块（cosine）。
    * ES 不可用或索引为空时返回 []。
    */
-  async knnSearch(queryVector: number[], topK = 20): Promise<ChunkHit[]> {
+  async knnSearch(queryVector: number[], topK = 20, scope?: DocumentAccessScope): Promise<ChunkHit[]> {
     if (!this.es) {
       this.logger.warn('跳过向量检索（ES 不可用）')
       return []
@@ -158,17 +204,23 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
     if (!queryVector.length) return []
 
     const k = this.clampTopK(topK)
+    const vis = scope ? esVisibilityFilter(scope, ES_CHUNK_VISIBILITY_FIELDS) : null
+
     try {
+      const knn: estypes.KnnSearch = {
+        field: 'embedding', // 使用 embedding 字段
+        query_vector: queryVector, // 查询向量
+        k, // 返回的结果数量
+        num_candidates: Math.max(k * 10, 50), // 候选数量
+      }
+
+      if (vis) knn.filter = vis // 如果 scope 存在，则添加过滤条件
+
       const response = await this.es.search({
         index: CHUNK_INDEX, // 从这个索引中查询
         size: k, // 返回的结果数量
         // NOTE: knn 检索的参数
-        knn: {
-          field: 'embedding', // 使用 embedding 字段
-          query_vector: queryVector, // 查询向量
-          k, // 返回的结果数量
-          num_candidates: Math.max(k * 10, 50), // 候选数量
-        },
+        knn,
         // 返回的字段：这些字段会被返回
         _source: ['chunk_id', 'document_id', 'document_title', 'content', 'heading'],
       })
@@ -189,6 +241,7 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
     queryVector?: number[] | null
     hybridTopK?: number
     rrfC?: number
+    scope?: DocumentAccessScope
   }): Promise<ChunkHit[]> {
     // 设置混合检索的 topK
     const hybridTopK = this.clampTopK(params.hybridTopK ?? 20)
@@ -198,9 +251,11 @@ export class VectorIndexService implements OnModuleInit, OnModuleDestroy {
     // 关键词的检索结果,向量检索的结果
     const [keywordHits, vectorHits] = await Promise.all([
       // 关键词检索
-      this.keywordSearch(params.query, hybridTopK),
+      this.keywordSearch(params.query, hybridTopK, params.scope),
       // 向量检索
-      params.queryVector?.length ? this.knnSearch(params.queryVector, hybridTopK) : Promise.resolve([] as ChunkHit[]),
+      params.queryVector?.length
+        ? this.knnSearch(params.queryVector, hybridTopK, params.scope)
+        : Promise.resolve([] as ChunkHit[]),
     ])
 
     // TIPS: 融合关键词和向量检索结果,使用 RRF 融合算法进行融合

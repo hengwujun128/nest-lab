@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException } from '@nestjs/common'
 import { InjectEntityManager } from '@nestjs/typeorm'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
@@ -18,7 +18,11 @@ import { FileParserService } from './parser/file-parser.service'
 import { decodeUploadFilename, getExtension, titleFromFilename } from './parser/utils/markdown.util'
 import { canArchive, canEditContent, canPublishFrom, DocumentStatus } from './document-status'
 import { DocumentReviewService } from './document-review.service'
+import { PipelineOrchestrator } from '../pipeline/pipeline.orchestrator'
+
 import { AuthUser } from '../auth/auth-user.interface'
+
+import { accessFromUser, canReadDocument, canWriteDocument } from './document-access'
 
 /**
  * 文档服务
@@ -41,6 +45,7 @@ export class DocumentService {
     private readonly rustfs: RustfsService,
     private readonly pipelinePublisher: DocumentPipelinePublisher,
     private readonly reviewService: DocumentReviewService,
+    private readonly pipeline: PipelineOrchestrator,
   ) {}
 
   /**
@@ -119,12 +124,34 @@ export class DocumentService {
    * 分页查询文档列表（只返回 Postgres 元数据，不含正文）
    * 支持按标题模糊、分类 / 团队 / 作者 / 状态筛选
    */
-  async findAll(query: QueryDocumentDto) {
+  async findAll(query: QueryDocumentDto, user: AuthUser) {
     const page = query.page ?? 1
     const pageSize = query.pageSize ?? 20
+    const scope = accessFromUser(user)
 
     // 默认排除已软删记录
     const qb = this.em.createQueryBuilder(DocumentEntity, 'doc').where('doc.deleted = :deleted', { deleted: false })
+
+    // 添加数据权限过滤
+    if (!scope.unrestricted) {
+      // 1. 用户自己创建的文档; 2. 用户所属团队发布的文档; 3. 公开文档
+      if (scope.teamIds.length) {
+        qb.andWhere(
+          `(doc.author_id = :me OR (doc.status = :published AND (doc.is_public = true OR doc.team_id IN (:...teamIds))))`,
+          {
+            me: scope.userId,
+            published: DocumentStatus.Published,
+            teamIds: scope.teamIds,
+          },
+        )
+      } else {
+        // 用户没有所属团队，只能查看自己创建的和公开文档
+        qb.andWhere(`(doc.author_id = :me OR (doc.status = :published AND doc.is_public = true))`, {
+          me: scope.userId,
+          published: DocumentStatus.Published,
+        })
+      }
+    }
 
     // 标题模糊匹配（不区分大小写）
     if (query.title) {
@@ -164,12 +191,15 @@ export class DocumentService {
    * 查询文档详情
    * @param withContent 是否附带 Mongo 正文，默认 true
    */
-  async findOne(id: string, withContent = true) {
+  async findOne(id: string, withContent = true, user?: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
     if (!doc) {
       throw new NotFoundException(`Document ${id} not found`)
+    }
+    if (user && !canReadDocument(doc, accessFromUser(user))) {
+      throw new ForbiddenException('无权查看该文档')
     }
 
     if (!withContent) {
@@ -191,7 +221,8 @@ export class DocumentService {
    * - 其余字段只更新 Postgres 元数据
    * - 首次变为「已发布」时写入 publishTime
    */
-  async update(id: string, dto: UpdateDocumentDto, actor?: AuthUser) {
+  async update(id: string, dto: UpdateDocumentDto, actor: AuthUser) {
+    // 更新前, 先查询文档是否存在
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -199,7 +230,12 @@ export class DocumentService {
       throw new NotFoundException(`Document ${id} not found`)
     }
 
+    // 检查是否有权限修改文档
+    this.assertWritable(doc, actor)
+
     const oldStatus = doc.status
+    const oldIsPublic = doc.isPublic
+    const oldTeamId = doc.teamId
 
     // —— 状态与编辑权限（待审核中不可改正文）——
     if (doc.status === DocumentStatus.PendingReview) {
@@ -207,6 +243,7 @@ export class DocumentService {
         throw new BadRequestException('审核中的文档不可编辑')
       }
     } else if (!canEditContent(doc.status)) {
+      // 其他状态不允许编辑
       throw new BadRequestException('当前文档状态不允许编辑')
     }
 
@@ -222,7 +259,7 @@ export class DocumentService {
     let contentChanged = false
     let newContent: string | undefined
 
-    // —— 正文变更 ——
+    // —— 正文变更(主要是更新 mongoDB 中的正文) ——
     if (dto.content !== undefined) {
       contentChanged = true
       newContent = dto.content
@@ -255,27 +292,22 @@ export class DocumentService {
     if (dto.summary !== undefined) doc.summary = dto.summary
     if (dto.categoryId !== undefined) doc.categoryId = dto.categoryId
     if (dto.teamId !== undefined) doc.teamId = dto.teamId
-    if (dto.authorId !== undefined) doc.authorId = dto.authorId
     if (dto.coverImage !== undefined) doc.coverImage = dto.coverImage
     if (dto.tags !== undefined) doc.tags = dto.tags
     if (dto.remark !== undefined) doc.remark = dto.remark
     if (dto.isPublic !== undefined) doc.isPublic = dto.isPublic
-    if (dto.updateBy !== undefined) doc.updateBy = dto.updateBy
-    else if (actor?.userId) doc.updateBy = actor.userId
-
-    // 状态从非发布 → 发布时，记录发布时间
-    if (dto.status !== undefined) {
-      if (dto.status === DocumentStatus.Published && doc.status !== DocumentStatus.Published) {
-        doc.publishTime = new Date()
-      }
-      doc.status = dto.status
-    }
+    doc.updateBy = actor.userId
 
     const saved = await this.em.save(doc)
     const finalContent = newContent ?? (await this.loadContent(doc.contentId))
 
+    // 如果可见性发生了变化，则需要同步索引,
+    const visibilityChanged = saved.isPublic !== oldIsPublic || (saved.teamId ?? null) !== oldTeamId
+
     // 已发布文档改内容/下架时，同步 RAG/Search/KG（需审核模式下已发布改稿不立即重建索引）
-    await this.syncPipelineAfterUpdate(saved, oldStatus, saved.status, contentChanged, finalContent)
+    // 改公开/团队必须立刻刷索引，否则 search 会继续按旧 isPublic 放行(因此,这里要把 visibilityChanged 同步给三个消费者)
+    await this.syncPipelineAfterUpdate(saved, oldStatus, saved.status, contentChanged, visibilityChanged)
+
     return { ...saved, content: finalContent }
   }
 
@@ -307,6 +339,8 @@ export class DocumentService {
     if (!doc) {
       throw new NotFoundException(`Document ${id} is not found`)
     }
+
+    this.assertWritable(doc, actor)
 
     if (!canPublishFrom(doc.status)) {
       throw new BadRequestException('当前文档状态不允许发布')
@@ -371,6 +405,9 @@ export class DocumentService {
     if (!doc) {
       throw new NotFoundException(`Document ${id} not found`)
     }
+
+    this.assertWritable(doc, actor)
+
     if (!canArchive(doc.status)) {
       throw new BadRequestException('只有已发布文档可以归档')
     }
@@ -392,6 +429,9 @@ export class DocumentService {
     if (!doc) {
       throw new NotFoundException(`Document ${id} not found`)
     }
+
+    this.assertWritable(doc, actor)
+
     if (doc.status !== DocumentStatus.Published) {
       throw new BadRequestException('只有已发布文档可以保存为草稿')
     }
@@ -418,17 +458,17 @@ export class DocumentService {
       throw new NotFoundException(`Document ${id} not found`)
     }
 
+    this.assertWritable(doc, actor)
+
+    if (doc.status === DocumentStatus.Published) {
+      // 仅已发布需要清索引；草稿/待审/归档删除时不投递 unpublish
+      await this.safeUnpublish(id)
+    }
+
     doc.deleted = true
     if (actor?.userId) doc.updateBy = actor.userId
     await this.em.save(doc)
     await this.contentModel.updateOne({ _id: doc.contentId }, { $set: { deleted: true } })
-
-    try {
-      await this.pipelinePublisher.afterUnpublish(id)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      this.logger.warn(`删除后索引清理投递失败：documentId=${id}, error=${message}`)
-    }
 
     return { id, deleted: true }
   }
@@ -525,25 +565,36 @@ export class DocumentService {
    * 更新后根据状态变化同步索引
    * - Published → 非 Published：清索引
    * - 仍为 Published 且正文变了：免审模式下重建索引；需审核模式下等再次发布/审核通过
+   * - 仍为 Published 且只改公开/团队：立刻刷三套索引的可见性字段（含需审核模式）
    */
   private async syncPipelineAfterUpdate(
     doc: DocumentEntity,
     oldStatus: DocumentStatus,
     newStatus: DocumentStatus,
     contentChanged: boolean,
-    content: string,
+    visibilityChanged: boolean,
   ) {
     const wasPublished = oldStatus === DocumentStatus.Published
     const isPublished = newStatus === DocumentStatus.Published
 
+    // 发布状态发生了变化, 需要清理索引
     if (wasPublished && !isPublished) {
       await this.safeUnpublish(doc.id)
       return
     }
+    // 如果文档已经发布了且正文发生了变化 且 不需要审核, 需要重建索引
+    if (isPublished && contentChanged && !this.reviewService.isRequireApproval()) {
+      await this.safePublish(doc)
+      return
+    }
 
-    if (isPublished && contentChanged) {
-      if (!this.reviewService.isRequireApproval()) {
-        await this.safePublish(doc)
+    // 如果已经发布了且可见性发生了变化(修改了可见性)，则需要同步索引
+    if (isPublished && visibilityChanged) {
+      try {
+        await this.pipeline.updateVisibility(doc)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        this.logger.warn(`可见性同步失败（不影响文档保存）：documentId=${doc.id}, ${message}`)
       }
     }
   }
@@ -552,6 +603,12 @@ export class DocumentService {
   private async loadContent(contentId: string): Promise<string> {
     const contentDoc = await this.contentModel.findOne({ _id: contentId, deleted: false }).lean()
     return contentDoc?.content ?? ''
+  }
+
+  private assertWritable(doc: DocumentEntity, actor: AuthUser) {
+    if (!canWriteDocument(doc, actor)) {
+      throw new ForbiddenException('无权修改该文档')
+    }
   }
 
   /** 投递 MQ：RAG 分块向量 + 全文搜索 + KG 建图（失败不回滚文档状态） */

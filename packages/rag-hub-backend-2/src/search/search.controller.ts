@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-17 09:09:16
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-09-17 10:46:29
+ * @LastEditTime: 2026-10-28 10:09:27
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/search/search.controller.ts
  */
@@ -11,6 +11,9 @@ import { SearchIndexService } from '../pipeline/search-index.service'
 import { SearchDocumentsDto } from './dto/search.dto'
 import { RequirePermission } from '../auth/decorators/require-permission.decorator'
 import { PermissionCode } from '../common/constants/permissions'
+import { accessFromUser } from '../document/document-access'
+import type { AuthUser } from 'src/auth/auth-user.interface'
+import { CurrentUser } from '../auth/decorators/current-user.decorator'
 
 @Controller('search')
 export class SearchController {
@@ -19,13 +22,14 @@ export class SearchController {
   /** 关键词检索,通过前端传入的关键词检索, 以及分页, 分类, 作者等条件检索; 已发布文档（ES kh_document） */
   @Post()
   @RequirePermission(PermissionCode.search)
-  search(@Body() dto: SearchDocumentsDto) {
+  search(@Body() dto: SearchDocumentsDto, @CurrentUser() user: AuthUser) {
     return this.searchIndex.searchDocuments({
       keyword: dto.keyword, // 关键词
       page: dto.page, // 分页
       pageSize: dto.pageSize, // 每页条数
       categoryId: dto.categoryId, // 分类
       authorId: dto.authorId, // 作者
+      scope: accessFromUser(user),
     })
   }
 }
