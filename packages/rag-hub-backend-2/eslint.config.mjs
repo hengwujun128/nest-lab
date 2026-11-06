@@ -7,7 +7,8 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['eslint.config.mjs'],
+    // init-scripts 由 mongosh / psql 在容器内执行，不属于应用代码
+    ignores: ['eslint.config.mjs', 'init-scripts/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
