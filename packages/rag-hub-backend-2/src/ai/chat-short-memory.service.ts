@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-11-02 17:02:32
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-11-05 15:10:17
+ * @LastEditTime: 2026-11-06 14:15:09
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/chat-short-memory.service.ts
  */

@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-09-23 10:39:43
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-10-14 15:26:43
+ * @LastEditTime: 2026-11-06 14:03:56
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/ai.module.ts
  */
@@ -19,6 +19,10 @@ import { RerankerService } from './reranker.service'
 
 import { WebSearchService } from './web-search.service'
 
+import { ChatShortMemoryService } from './chat-short-memory.service'
+import { ChatLongMemoryService } from './chat-long-memory.service'
+import { ChatQueryRewriteService } from './chat-query-rewrite.service'
+
 @Module({
   imports: [PipelineModule],
   controllers: [AiController],
@@ -29,6 +33,11 @@ import { WebSearchService } from './web-search.service'
     HybridRetrievalService,
     RerankerService,
     WebSearchService,
+
+    /**短期记忆、长期记忆、查询重写 */
+    ChatShortMemoryService,
+    ChatLongMemoryService,
+    ChatQueryRewriteService,
   ],
 })
 export class AiModule {}

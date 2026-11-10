@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-11-02 17:02:32
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-11-03 15:26:55
+ * @LastEditTime: 2026-11-06 14:47:55
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/chat-query-rewrite.service.ts
  */
@@ -15,9 +15,11 @@ import { compactRewriteContext } from './chat-memory.util'
 
 const rewriteSchema = z.object({
   standalone_query: z.string().describe('可独立检索的一句中文短查询，消解指代和省略，不含寒暄'),
+  /** 是否需要查知识库。寒暄、致谢、与制度无关的闲聊为 false */
   need_retrieve: z.boolean().describe('是否需要查知识库。寒暄、致谢、与制度无关的闲聊为 false'),
 })
 
+// 主要把代词、省略、歧义消解，并补充缺失的主题
 const REWRITE_PROMPT =
   '你是企业知识库的检索改写器。根据对话把当前问题改写成一条可独立检索的短查询。\n' +
   '\n' +
@@ -85,6 +87,7 @@ export class ChatQueryRewriteService {
       ])
       const query = result.standalone_query.trim() || question
       this.logger.log(`检索改写：needRetrieve=${result.need_retrieve} query=${query.slice(0, 80)}`)
+      // 返回查询计划，是否需要查知识库，以及查询语句
       return { query, needRetrieve: result.need_retrieve }
     } catch (error) {
       this.logger.warn(`检索改写失败，使用原问题：${error instanceof Error ? error.message : error}`)

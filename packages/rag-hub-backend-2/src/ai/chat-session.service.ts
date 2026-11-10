@@ -73,6 +73,18 @@ export class ChatSessionService {
     })
   }
 
+  /** 最近 N 条，时间正序，供 Redis miss 时回填工作窗口 */
+  async listRecentMessages(userId: string, sessionId: string, limit: number) {
+    await this.getOwned(userId, sessionId)
+    // 从最近到最旧，取 N 条
+    const rows = await this.em.find(AiMessageEntity, {
+      where: { sessionId }, // 只查询当前会话的对话记录
+      order: { createdAt: 'DESC', id: 'DESC' }, // 按创建时间倒序，id 倒序
+      take: Math.max(limit, 1), // 取 N 条
+    })
+    return rows.reverse()
+  }
+
   /**
    * 追加对话记录, 将用户的问题和助手的回答落库, 并更新会话的更新时间
    * 问答落库：无 sessionId 则新建；标题在仍为默认名时用首问覆盖。

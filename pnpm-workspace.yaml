@@ -3,6 +3,7 @@ packages:
 
 allowBuilds:
   '@swc/core': true
+  better-sqlite3: set this to true or false
   core-js: false
   tesseract.js: false
 
@@ -69,3 +70,4 @@ catalog:
   '@nestjs-modules/mailer': 2.3.7
   nodemailer: 10.0.9
   ai: ^7.0.138
+  mem0ai: ^3.3.1
