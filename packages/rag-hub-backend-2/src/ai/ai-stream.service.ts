@@ -160,21 +160,21 @@ export class AiStreamService {
           return
         }
 
-        // session 处理
+        // 创建|更新 session 会话 (创建 session 或更新 session 标题)
         const session = dto.sessionId
           ? await this.sessions.touchTitle(user.userId, dto.sessionId, question)
           : await this.sessions.create(user.userId, {
               title: titleFromQuestion(question),
             })
 
-        // 持久化会话 ID
+        // 获取 session会话 ID
         persistSessionId = session.id
         writer.write({
           type: 'data-session',
           data: { sessionId: session.id },
         })
 
-        // 加载短期记忆，用于问题重写和知识库检索
+        // 根据 session会话 ID 加载短期记忆，用于问题重写和知识库检索
         const history = await this.loadWorkingHistory(user.userId, session.id)
         persistHistory = history
 
@@ -185,7 +185,7 @@ export class AiStreamService {
           })
         }
 
-        // 问题重写
+        // 根据短期记忆进行问题重写,并返回重写后的问题和是否需要知识库检索
         const plan = await this.queryRewrite.rewrite(question, history)
 
         // 是否需要知识库检索
@@ -209,8 +209,13 @@ export class AiStreamService {
           this.longMemory.search(user.userId, session.id, plan.query),
         ])
 
+        // 先将RAG检索结果(数组)转换为源数据, 如: 索引、文档ID、文档标题、段落,打分等
         const sources = this.toSources(hits)
+
+        // 持久化源数据
         persistSources = sources
+
+        // 写入RAG检索结果(UI消息流)
         writer.write({
           type: 'data-retrieve',
           data: {
@@ -223,7 +228,8 @@ export class AiStreamService {
             })),
           },
         })
-        // 写 data-sources
+
+        // 写入数据源结果(UI消息流)data-sources
         writer.write({ type: 'data-sources', data: sources })
         // 写 source-document
         for (const src of sources) {
@@ -243,15 +249,21 @@ export class AiStreamService {
           writer.write({ type: 'finish' })
           return
         }
+
+        /* -------------------------------------------------------------------------- */
+        /*                                  开始拼接上下文部分                           */
+        /* -------------------------------------------------------------------------- */
+        // 1. 先拼接 prompt(主要是rag检索结果和用户问题的拼接)
         const prompt = hits.length
           ? `检索到的资料：\n${this.buildContext(hits)}\n\n用户问题：${question}`
           : plan.needRetrieve
             ? `知识库没有召回到相关内容。\n\n用户问题：${question}`
             : `用户问题：${question}`
 
+        // 2. 根据长期记忆构建系统消息(SystemMessage)
         const memoryMsg = this.longMemory.buildSystemMessage(memHits)
 
-        // NOTE: 检索结果和常记忆都 拼接 成 messages 传递给 Agent
+        // 3: prompt作为HumanMessage和常记忆(SystemMessage)都 拼接 成 messages 传递给 Agent
         const langchainStream = await this.agent.stream(
           {
             messages: [...(memoryMsg ? [memoryMsg] : []), ...history, new HumanMessage(prompt)],
@@ -260,6 +272,9 @@ export class AiStreamService {
           { streamMode: ['messages', 'tools'] },
         )
 
+        /* -------------------------------------------------------------------------- */
+        /*                             将Agent的流式响应合并到UI消息流                    */
+        /* -------------------------------------------------------------------------- */
         writer.merge(
           toUIMessageStream(mapReasoningStream(langchainStream) as never, {
             // 外层 execute 已写 start，流结束由 createUIMessageStream 收口，避免重复

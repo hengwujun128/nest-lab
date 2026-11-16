@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-11-02 17:02:32
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-11-03 14:01:09
+ * @LastEditTime: 2026-11-10 11:37:55
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/chat-memory.util.ts
  */
@@ -25,6 +25,7 @@ export function messageText(message: BaseMessage): string {
     .trim()
 }
 
+// 短期记忆只保留 human/ai message，即 human/ai message
 export function isWorkingMessage(message: BaseMessage): boolean {
   return HumanMessage.isInstance(message) || AIMessage.isInstance(message)
 }

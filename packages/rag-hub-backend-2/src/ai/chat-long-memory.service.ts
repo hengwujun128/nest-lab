@@ -99,7 +99,7 @@ export class ChatLongMemoryService {
     return Boolean(this.client)
   }
 
-  // 基于用户的 query 来搜索记忆
+  // 基于用户的 query 来检索用户的长期记忆和当前会话记忆
   async search(userId: string, sessionId: string | undefined, query: string): Promise<LongMemoryHits> {
     const empty: LongMemoryHits = { user: [], session: [] }
     if (!this.client) return empty

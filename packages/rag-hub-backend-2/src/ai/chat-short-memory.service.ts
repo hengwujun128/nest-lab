@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-11-02 17:02:32
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-11-06 14:15:09
+ * @LastEditTime: 2026-11-10 14:19:31
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/chat-short-memory.service.ts
  */
@@ -35,8 +35,11 @@ export class ChatShortMemoryService {
     config: ConfigService,
     private readonly redis: RedisService,
   ) {
+    // 短期记忆的过期时间，默认 24 小时
     this.ttlSeconds = Number(config.get('CHAT_SHORT_MEMORY_TTL_SECONDS', 86400))
+    // 短期记忆的最大消息数，默认 20 条
     this.maxMessages = Number(config.get('CHAT_SHORT_MEMORY_MAX_MESSAGES', 20))
+    // 短期记忆的键前缀，默认 'kh:chat'
     this.keyPrefix = config.get('CHAT_SHORT_MEMORY_KEY_PREFIX', 'kh:chat')
   }
 
@@ -49,6 +52,7 @@ export class ChatShortMemoryService {
     try {
       const raw = await this.redis.get(this.key(userId, sessionId))
       if (!raw) return null
+      // 把 JSON 字符串解析为对象数组
       const parsed = JSON.parse(raw) as unknown
       if (!Array.isArray(parsed)) return null
       // 把 JSON 对象数组映射为 ChatMessage 数组，并过滤出AI message 和 Human message
@@ -82,6 +86,7 @@ export class ChatShortMemoryService {
     await this.save(userId, sessionId, [...history, new HumanMessage(question), new AIMessage(answer)])
   }
 
+  // 清理短期记忆
   async clear(userId: string, sessionId: string): Promise<void> {
     try {
       await this.redis.del(this.key(userId, sessionId))
@@ -90,6 +95,7 @@ export class ChatShortMemoryService {
     }
   }
 
+  // 短期记忆的键，默认 'kh:chat:userId:sessionId:messages'
   private key(userId: string, sessionId: string) {
     return `${this.keyPrefix}:${userId}:${sessionId}:messages`
   }
