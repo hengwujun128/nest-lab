@@ -2,7 +2,7 @@
  * @Author: 张泽全 hengwujun128@gmail.com
  * @Date: 2026-11-02 17:02:32
  * @LastEditors: 张泽全 hengwujun128@gmail.com
- * @LastEditTime: 2026-11-06 14:47:55
+ * @LastEditTime: 2026-11-17 15:36:28
  * @Description:
  * @FilePath: /nest-lab/packages/rag-hub-backend-2/src/ai/chat-query-rewrite.service.ts
  */
@@ -29,7 +29,7 @@ const REWRITE_PROMPT =
   '- 不要编造上文没出现的专有名词、条款号、系统名\n' +
   '- 不要复述助手给出的制度条文、时限、流程细节\n' +
   '- 当前问题已经完整、不依赖上文时，standalone_query 用原问题略作精炼即可\n' +
-  '- 寒暄、致谢、与知识库无关 → need_retrieve=false，standalone_query 仍给原问题\n' +
+  '- 没有上文时同样判断。寒暄、致谢、只报名字、与知识库无关 → need_retrieve=false，standalone_query 仍给原问题\n' +
   '- 输出不要解释'
 
 export type RetrieveQueryPlan = {
@@ -38,7 +38,8 @@ export type RetrieveQueryPlan = {
 }
 
 /**
- * 检索前把追问改写成独立短查询。未配置 LLM 或改写失败时回退原文。
+ * 检索前把问题改写成独立短查询，并判断要不要查库。
+ * 未配置 LLM 或改写失败时回退原文并查库。
  */
 @Injectable()
 export class ChatQueryRewriteService {
@@ -74,20 +75,19 @@ export class ChatQueryRewriteService {
   }
 
   async rewrite(question: string, history: BaseMessage[]): Promise<RetrieveQueryPlan> {
+    // 没模型或改写失败才查库。第一句也要判断，不能在这里把寒暄和正题一起放行。
     const fallback: RetrieveQueryPlan = { query: question, needRetrieve: true }
-    if (!history.length || !this.rewriter) return fallback
+    if (!this.rewriter) return fallback
 
     const context = compactRewriteContext(history)
-    if (!context) return fallback
+    const userContent = context
+      ? `对话：\n${context}\n\n当前问题：${question}`
+      : `当前问题：${question}\n\n没有更早的对话。`
 
     try {
-      const result = await this.rewriter.invoke([
-        new SystemMessage(REWRITE_PROMPT),
-        new HumanMessage(`对话：\n${context}\n\n当前问题：${question}`),
-      ])
+      const result = await this.rewriter.invoke([new SystemMessage(REWRITE_PROMPT), new HumanMessage(userContent)])
       const query = result.standalone_query.trim() || question
       this.logger.log(`检索改写：needRetrieve=${result.need_retrieve} query=${query.slice(0, 80)}`)
-      // 返回查询计划，是否需要查知识库，以及查询语句
       return { query, needRetrieve: result.need_retrieve }
     } catch (error) {
       this.logger.warn(`检索改写失败，使用原问题：${error instanceof Error ? error.message : error}`)

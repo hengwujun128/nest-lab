@@ -26,6 +26,8 @@ const EXCERPT_LEN = 200
 
 const SYSTEM =
   '你是企业知识库助手。优先根据「检索到的资料」回答。' +
+  '结合对话历史和记忆里的用户背景，但制度/流程以本轮资料为准，不要用记忆替代文档。' +
+  '没有检索资料且是寒暄时，直接回应，不必调用 web_search。' +
   '资料不足、需要时效性或外部公开信息时，调用 web_search。' +
   '依据资料的陈述句末标 [n]，与资料编号一致。' +
   '联网结果用标题+链接说明，不要编造。资料不够就明确说不知道。'
@@ -188,7 +190,6 @@ export class AiStreamService {
         // 根据短期记忆进行问题重写,并返回重写后的问题和是否需要知识库检索
         const plan = await this.queryRewrite.rewrite(question, history)
 
-        // 是否需要知识库检索
         if (plan.needRetrieve) {
           writer.write({
             type: 'data-status',
@@ -215,30 +216,29 @@ export class AiStreamService {
         // 持久化源数据
         persistSources = sources
 
-        // 写入RAG检索结果(UI消息流)
-        writer.write({
-          type: 'data-retrieve',
-          data: {
-            query: question,
-            items: sources.map((src) => ({
-              index: src.index,
-              documentId: src.documentId,
-              documentTitle: src.documentTitle,
-              heading: src.heading,
-            })),
-          },
-        })
-
-        // 写入数据源结果(UI消息流)data-sources
-        writer.write({ type: 'data-sources', data: sources })
-        // 写 source-document
-        for (const src of sources) {
+        // 没查库就不写检索卡，避免寒暄也被展示成「已检索可见文档」
+        if (plan.needRetrieve) {
           writer.write({
-            type: 'source-document',
-            sourceId: src.documentId,
-            mediaType: 'text/markdown',
-            title: `[${src.index}] ${src.documentTitle}`,
+            type: 'data-retrieve',
+            data: {
+              query: question,
+              items: sources.map((src) => ({
+                index: src.index,
+                documentId: src.documentId,
+                documentTitle: src.documentTitle,
+                heading: src.heading,
+              })),
+            },
           })
+          writer.write({ type: 'data-sources', data: sources })
+          for (const src of sources) {
+            writer.write({
+              type: 'source-document',
+              sourceId: src.documentId,
+              mediaType: 'text/markdown',
+              title: `[${src.index}] ${src.documentTitle}`,
+            })
+          }
         }
         // 写 error
         if (!this.agent) {

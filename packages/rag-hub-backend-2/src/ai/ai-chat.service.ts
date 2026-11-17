@@ -62,7 +62,7 @@ export class AiChatService {
    *
    * @memberOf AiChatService
    * */
-  async chat(question: string, topK = 5, user?: AuthUser, sessionId?: string) {
+  async chat(question: string, topK = 5, user: AuthUser, sessionId?: string) {
     // 去除问题两端的空白字符
     const trimmed = question.trim()
 

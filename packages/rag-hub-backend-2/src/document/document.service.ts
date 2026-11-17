@@ -398,7 +398,7 @@ export class DocumentService {
   }
 
   /** 归档：Published → Archived，清索引 */
-  async archive(id: string, actor?: AuthUser) {
+  async archive(id: string, actor: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -422,7 +422,7 @@ export class DocumentService {
   }
 
   /** 已发布 → 草稿（保存草稿），清索引 */
-  async saveAsDraft(id: string, actor?: AuthUser) {
+  async saveAsDraft(id: string, actor: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
@@ -450,7 +450,7 @@ export class DocumentService {
    * Postgres、Mongo 两侧都将 deleted 置为 true（不物理删正文）
    * 并异步清理 ES 搜索索引与向量快
    */
-  async remove(id: string, actor?: AuthUser) {
+  async remove(id: string, actor: AuthUser) {
     const doc = await this.em.findOne(DocumentEntity, {
       where: { id, deleted: false },
     })
